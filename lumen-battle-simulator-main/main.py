@@ -1,14 +1,11 @@
 import sys
-from src.ui.cli import UnifiedCLI
+from src.ui.app_gui import launch_gui
 
 
 def main() -> None:
-    """Ponto de entrada principal da aplicação."""
     try:
-        app = UnifiedCLI()
-        app.run()
+        launch_gui()
     except KeyboardInterrupt:
-        print("\n\n[-] Aplicação interrompida pelo usuário.")
         sys.exit(0)
 
 
