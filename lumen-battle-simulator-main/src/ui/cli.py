@@ -1,63 +1,67 @@
-from src.models.lumen import Lumen, Skill
-from src.models.enums import Element, Rarity, AIStrategyType
-from src.core.battle import BattleEngine
-from src.services.simulation import MassSimulator
+import time
+import cv2
+import os
+from src.automation.bot_engine import LumenaBotEngine
 
-class CLIInterface:
-    def start(self):
+
+class UnifiedCLI:
+    def __init__(self) -> None:
+        self.bot = LumenaBotEngine()
+
+    def capture_template(self) -> None:
+        print("\n--- CAPTURA DE TEMPLATES ---")
+        filename = input("Nome do template (ex: fight_button.png, dialog_box.png): ").strip()
+        if not filename.endswith((".png", ".jpg")):
+            filename += ".png"
+
+        print("Alterne para o jogo em 3 segundos...")
+        time.sleep(3)
+        screenshot = self.bot.vision.get_screenshot()
+        save_path = os.path.join(self.bot.config.templates_dir, filename)
+        cv2.imwrite(save_path, screenshot)
+        self.bot.vision.load_templates()
+        print(f"[+] Print salvo em '{save_path}'. Recorte a imagem para isolar o botão.")
+
+    def test_vision(self) -> None:
+        print("\n--- TESTE DE VISÃO COMPUTACIONAL ---")
+        screenshot = self.bot.vision.get_screenshot()
+        for name in self.bot.vision.templates.keys():
+            match = self.bot.vision.find_template(name, screenshot=screenshot)
+            if match:
+                print(f"[OK] Template '{name}' detectado em: {match}")
+            else:
+                print(f"[X] Template '{name}' não encontrado.")
+
+    def run(self) -> None:
         while True:
-            print("\n==========================================")
-            print("       LUMEN BATTLE SIMULATOR             ")
-            print("==========================================")
-            print("1. Criar Lumen de Teste")
-            print("2. Simular Batalha X1")
-            print("3. Executar Campeonato Massivo (Benchmark)")
-            print("4. Sair")
-            
-            option = input("\nEscolha uma opção: ").strip()
-            
-            if option == "1":
-                self._menu_create_lumen()
-            elif option == "2":
-                self._menu_quick_battle()
-            elif option == "3":
-                self._menu_mass_simulation()
-            elif option == "4":
-                print("Encerrando simulador...")
+            status = "EXECUTANDO" if self.bot.is_running else "PARADO"
+            print("\n==============================================")
+            print(f"   LUMENA BATTLE SIMULATOR & BOT [{status}]")
+            print("==============================================")
+            print("1 - Iniciar / Parar Automação Visual (Macro)")
+            print("2 - Capturar Novo Template de Tela")
+            print("3 - Testar Reconhecimento Visão")
+            print("4 - Executar Teste Manual da Rota + Cura")
+            print("5 - Sair")
+
+            choice = input("Opção: ").strip()
+
+            if choice == "1":
+                if self.bot.is_running:
+                    self.bot.stop()
+                else:
+                    self.bot.start()
+            elif choice == "2":
+                self.capture_template()
+            elif choice == "3":
+                self.test_vision()
+            elif choice == "4":
+                print("\nIniciando rota até a Estrutura Azul e Cura em 3s...")
+                time.sleep(3)
+                self.bot.full_heal_routine()
+            elif choice == "5":
+                self.bot.stop()
+                print("Encerrando...")
                 break
             else:
-                print("Opção inválida! Tente novamente.")
-
-    def _menu_create_lumen(self):
-        name = input("Nome do Lumen: ").strip() or "Lumen-Standard"
-        print("Lumen criado com sucesso!")
-
-    def _menu_quick_battle(self):
-        s1 = Skill("Golpe Elétrico", Element.ELECTRIC, power=30, energy_cost=10, accuracy=0.9)
-        s2 = Skill("Jato de Água", Element.WATER, power=35, energy_cost=15, accuracy=0.85)
-
-        l1 = Lumen(1, "Volt", Element.ELECTRIC, Rarity.RARE, skills=[s1])
-        l2 = Lumen(2, "Aqua", Element.WATER, Rarity.COMMON, skills=[s2])
-
-        print(f"\nIniciando duelo: {l1.name} VS {l2.name}")
-        engine = BattleEngine(l1, l2, AIStrategyType.AGGRESSIVE, AIStrategyType.DEFENSIVE)
-        result = engine.run()
-        print(f"-> Vencedor: {result.winner.name} em {result.turns} turnos!")
-
-    def _menu_mass_simulation(self):
-        rounds = 500
-        print(f"\nRodando {rounds} batalhas automatizadas entre IAs...")
-        
-        s1 = Skill("Chama", Element.FIRE, power=25, energy_cost=5, accuracy=0.95)
-        
-        def build_lumen_a(): return Lumen(1, "Ignis", Element.FIRE, Rarity.RARE, skills=[s1])
-        def build_lumen_b(): return Lumen(2, "Terra", Element.EARTH, Rarity.RARE, skills=[s1])
-
-        sim = MassSimulator(build_lumen_a, build_lumen_b)
-        metrics = sim.run_benchmark(rounds, AIStrategyType.AGGRESSIVE, AIStrategyType.BALANCED)
-        
-        print("\n--- Resultados do Benchmark ---")
-        print(f"Total de Batalhas: {metrics.total_battles}")
-        print(f"Vitórias da IA Agressiva: {metrics.wins_a}")
-        print(f"Vitórias da IA Equilibrada: {metrics.wins_b}")
-        print(f"Média de Turnos: {metrics.avg_turns:.2f}")
+                print("Opção inválida.")

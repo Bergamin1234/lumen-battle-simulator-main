@@ -109,6 +109,10 @@ def main():
         elif choice == "3":
             print("Saindo do simulador...")
             sys.exit(0)
+from src.ui.cli import UnifiedCLI
 
+if __name__ == "__main__":
+    app = UnifiedCLI()
+    app.run()
 if __name__ == "__main__":
     main()
