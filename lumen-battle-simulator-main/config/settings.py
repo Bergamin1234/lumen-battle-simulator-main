@@ -1,7 +1,6 @@
+from dataclasses import dataclass, field
 import json
 import os
-from dataclasses import dataclass, field
-from typing import Dict, Any, List
 
 
 @dataclass
@@ -32,8 +31,8 @@ class BotConfig:
     monitor: int = 1
     battles_before_heal_check: int = 5
     keys: KeyBindings = field(default_factory=KeyBindings)
-    route_to_heal: List[RouteStep] = field(default_factory=list)
-    route_to_farm: List[RouteStep] = field(default_factory=list)
+    route_to_heal: list[RouteStep] = field(default_factory=list)
+    route_to_farm: list[RouteStep] = field(default_factory=list)
 
     @classmethod
     def load_from_json(cls, filepath: str = "settings.json") -> "BotConfig":
@@ -43,7 +42,7 @@ class BotConfig:
             return config
 
         with open(filepath, "r", encoding="utf-8") as f:
-            data: Dict[str, Any] = json.load(f)
+            data: dict[str, object] = json.load(f)
 
         keys_data = data.pop("keys", {})
         keys = KeyBindings(**keys_data)

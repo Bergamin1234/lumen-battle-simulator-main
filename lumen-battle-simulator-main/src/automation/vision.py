@@ -1,9 +1,8 @@
 import os
 import time
 import cv2
-import numpy as np
 import mss
-from typing import Optional, Tuple, Dict
+import numpy as np
 
 
 class VisionSystem:
@@ -12,7 +11,7 @@ class VisionSystem:
         self.confidence = confidence
         self.monitor_index = monitor_index
         self.sct = mss.mss()
-        self.templates: Dict[str, np.ndarray] = {}
+        self.templates: dict[str, np.ndarray] = {}
         self.load_templates()
 
     def load_templates(self) -> None:
@@ -37,9 +36,9 @@ class VisionSystem:
     def find_template(
         self, 
         template_name: str, 
-        screenshot: Optional[np.ndarray] = None, 
-        threshold: Optional[float] = None
-    ) -> Optional[Tuple[int, int, int, int]]:
+        screenshot: np.ndarray | None = None, 
+        threshold: float | None = None
+    ) -> tuple[int, int, int, int] | None:
         if threshold is None:
             threshold = self.confidence
 
@@ -58,7 +57,7 @@ class VisionSystem:
             return (max_loc[0], max_loc[1], w, h)
         return None
 
-    def template_exists(self, template_name: str, threshold: Optional[float] = None) -> bool:
+    def template_exists(self, template_name: str, threshold: float | None = None) -> bool:
         return self.find_template(template_name, threshold=threshold) is not None
 
     def wait_template(
@@ -66,7 +65,7 @@ class VisionSystem:
         template_name: str, 
         timeout: float = 10.0, 
         check_interval: float = 0.2
-    ) -> Optional[Tuple[int, int, int, int]]:
+    ) -> tuple[int, int, int, int] | None:
         start_time = time.time()
         while time.time() - start_time < timeout:
             location = self.find_template(template_name)
@@ -75,6 +74,6 @@ class VisionSystem:
             time.sleep(check_interval)
         return None
 
-    def get_center_coords(self, match_box: Tuple[int, int, int, int]) -> Tuple[int, int]:
+    def get_center_coords(self, match_box: tuple[int, int, int, int]) -> tuple[int, int]:
         x, y, w, h = match_box
         return (x + w // 2, y + h // 2)

@@ -1,7 +1,6 @@
-import time
 import random
+import time
 import pyautogui
-from typing import Tuple
 
 pyautogui.FAILSAFE = True
 
@@ -22,7 +21,7 @@ class InputController:
         pyautogui.click(x=jitter_x, y=jitter_y)
         time.sleep(delay)
 
-    def click_relative(self, base_box: Tuple[int, int, int, int], offset_x: int = 0, offset_y: int = 0) -> None:
+    def click_relative(self, base_box: tuple[int, int, int, int], offset_x: int = 0, offset_y: int = 0) -> None:
         x, y, w, h = base_box
         center_x = x + (w // 2) + offset_x
         center_y = y + (h // 2) + offset_y
