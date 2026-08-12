@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
-from src.models.enums import Element, Rarity, MoveCategory, CodeTraitGrade, StatusEffect
+from src.models.enums import Element, Rarity, MoveCategory, CodeTraitGrade, StatusEffect, AgentState
+
 
 
 @dataclass
