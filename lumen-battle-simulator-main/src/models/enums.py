@@ -53,3 +53,38 @@ class AIStrategyType(Enum):
     BALANCED = "equilibrada"
     RANDOM = "aleatória"
     RL_AGENT = "aprendizado_reforco"
+
+
+class AgentState(Enum):
+    BOOT = auto()
+    INACTIVE = auto()
+    CALIBRATING = auto()
+    SEARCHING_FARM = auto()
+    EXPLORING = auto()
+    BATTLE_DETECTED = auto()
+    BATTLE = auto()
+    SWITCHING_LUMEN = auto()
+    BATTLE_RESULT = auto()
+    EVALUATING_TEAM = auto()
+    NAVIGATING_TO_HEAL = auto()
+    SEARCHING_CRYSTAL = auto()
+    HEALING = auto()
+    VERIFYING_HEAL = auto()
+    RETURNING_TO_FARM = auto()
+    STUCK_RECOVERY = auto()
+    UNKNOWN_STATE = auto()
+    SAFE_STOP = auto()
+    ERROR_RECOVERY = auto()
+
+
+class MoveDirection(Enum):
+    UP = "w"
+    DOWN = "s"
+    LEFT = "a"
+    RIGHT = "d"
+    UP_LEFT = "w+a"
+    UP_RIGHT = "w+d"
+    DOWN_LEFT = "s+a"
+    DOWN_RIGHT = "s+d"
+    INTERACT = "e"
+    CANCEL = "esc"

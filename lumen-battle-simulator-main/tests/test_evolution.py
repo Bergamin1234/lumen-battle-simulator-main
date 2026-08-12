@@ -18,9 +18,9 @@ def test_lumen_level_up():
     )
 
     # Adiciona XP suficiente para subir de nível
-    leveled_up = EvolutionService.add_experience(lumen, 150)
+    result = EvolutionService.add_experience(lumen, 150)
 
-    assert leveled_up is True
+    assert result["leveled_up"] is True
     assert lumen.level > 1
 
 def test_stat_recalculation_on_level_up():
