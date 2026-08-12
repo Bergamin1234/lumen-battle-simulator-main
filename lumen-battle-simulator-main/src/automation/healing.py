@@ -13,41 +13,28 @@ class HealingController:
         self.logger = logging.getLogger("LumenaMacro")
 
     def perform_heal(self) -> bool:
-        self.logger.info("Interagindo com a Estrutura Azul de Cura...")
-        interact_key = self.config.keys.interact
+        """
+        Executa a sequência exata de cura no Cristal Azul:
+        1. Pressiona Espaço para abrir o diálogo.
+        2. Pressiona Espaço para avançar do texto inicial para a confirmação.
+        3. Pressiona Espaço para fechar a caixa de diálogo.
+        """
+        self.logger.info("Aproximando-se do Cristal Azul de Cura...")
+        interact_key = getattr(self.config.keys, "interact", "space")
 
+        # 1. Pressionar Espaço para abrir o diálogo do Cristal
         self.input_ctrl.press_key(interact_key, duration=0.2)
-        time.sleep(0.8)
+        time.sleep(1.2)
 
-        start_time = time.time()
-        max_dialogue_timeout = 12.0
+        # 2. Pressionar Espaço para avançar do texto inicial ('The crystuml's leught...')
+        self.logger.info("Avançando mensagem do Cristal de Cura...")
+        self.input_ctrl.press_key(interact_key, duration=0.2)
+        time.sleep(1.2)
 
-        while time.time() - start_time < max_dialogue_timeout:
-            heal_yes = self.vision.find_template("heal_yes_btn.png")
-            if heal_yes:
-                cx, cy = self.vision.get_center_coords(heal_yes)
-                self.input_ctrl.click(cx, cy)
-                self.logger.info("Confirmado clique no menu de cura.")
-                time.sleep(1.0)
-                continue
+        # 3. Pressionar Espaço para fechar o diálogo final ('Your Lumens are fully healed...')
+        self.logger.info("Concluindo cura do time ('Your Lumens are fully healed')...")
+        self.input_ctrl.press_key(interact_key, duration=0.2)
+        time.sleep(1.0)
 
-            if self.vision.template_exists("dialog_box.png") or self.vision.template_exists("dialog_arrow.png"):
-                self.logger.info("Avançando diálogo da Estrutura Azul...")
-                self.input_ctrl.press_key(interact_key, duration=0.15)
-                time.sleep(0.6)
-                continue
-
-            close_btn = self.vision.find_template("close_dialog.png")
-            if close_btn:
-                cx, cy = self.vision.get_center_coords(close_btn)
-                self.input_ctrl.click(cx, cy)
-                self.logger.info("Diálogo concluído via botão fechar.")
-                break
-
-            if not self.vision.template_exists("dialog_box.png") and not self.vision.template_exists("dialog_arrow.png"):
-                self.input_ctrl.press_key(interact_key, duration=0.15)
-                time.sleep(0.5)
-                break
-
-        self.logger.info("Equipe totalmente restaurada!")
+        self.logger.info("✓ Todos os Lumens foram curados com sucesso!")
         return True

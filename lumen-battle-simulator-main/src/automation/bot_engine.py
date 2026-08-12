@@ -1,83 +1,68 @@
-import os
 import time
 import logging
-import threading
 from config.settings import BotConfig
-from src.automation.vision import VisionSystem
 from src.automation.input_controller import InputController
+from src.automation.vision import VisionSystem
 from src.automation.movement import MovementController
-from src.automation.navigation import NavigationController
 from src.automation.healing import HealingController
-from src.automation.battle_macro import BattleController
-
-
-def setup_logging(logs_dir: str) -> None:
-    os.makedirs(logs_dir, exist_ok=True)
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        handlers=[
-            logging.FileHandler(os.path.join(logs_dir, "macro.log"), encoding="utf-8"),
-            logging.StreamHandler()
-        ]
-    )
+from src.automation.navigation import NavigationController
+from src.automation.battle_macro import BattleMacro
 
 
 class LumenaBotEngine:
-    def __init__(self) -> None:
-        self.config = BotConfig.load_from_json()
-        setup_logging(self.config.logs_dir)
+    def __init__(self, config: BotConfig) -> None:
+        self.config = config
         self.logger = logging.getLogger("LumenaMacro")
-
-        self.vision = VisionSystem(
-            templates_dir=self.config.templates_dir,
-            confidence=self.config.confidence,
-            monitor_index=self.config.monitor
-        )
-        self.input_ctrl = InputController()
-        self.movement = MovementController(self.config, self.input_ctrl)
-        self.battle = BattleController(self.config, self.vision, self.input_ctrl)
-        self.navigation = NavigationController(self.config, self.input_ctrl)
-        self.healing = HealingController(self.config, self.vision, self.input_ctrl)
-
         self.is_running = False
-        self.macro_thread: threading.Thread | None = None
 
-    def full_heal_routine(self) -> None:
-        self.logger.info("=== CICLO DE REPOSIÇÃO E CURA NA ESTRUTURA AZUL ===")
-        self.navigation.walk_to_healer()
-        self.healing.perform_heal()
-        self.navigation.walk_to_farm()
-        self.battle.reset_battle_counter()
-        self.logger.info("=== RETORNANDO AO FARM ===")
+        self.input_ctrl = InputController()
+        self.vision = VisionSystem(config)
+        self.movement_ctrl = MovementController(config, self.input_ctrl)
+        self.healing_ctrl = HealingController(config, self.vision, self.input_ctrl)
+        self.nav_ctrl = NavigationController(config, self.input_ctrl)
+        self.battle_macro = BattleMacro(config, self.vision, self.input_ctrl)
 
-    def _macro_loop(self) -> None:
-        self.logger.info("Loop do Bot Autônomo iniciado.")
-        while self.is_running:
-            try:
-                if self.battle.in_battle():
-                    self.battle.handle_battle()
-
-                    if self.battle.needs_healing():
-                        self.full_heal_routine()
-                else:
-                    self.movement.execute_step()
-
-                time.sleep(0.02)
-            except Exception as e:
-                self.logger.error(f"Erro na FSM do Bot: {e}")
-                time.sleep(1.0)
+        self.battle_count = 0
 
     def start(self) -> None:
-        if not self.is_running:
-            self.is_running = True
-            self.macro_thread = threading.Thread(target=self._macro_loop, daemon=True)
-            self.macro_thread.start()
-            print("\n[+] Bot Autônomo INICIADO.")
+        """Loop Infinito 100% Autônomo e Auto-Sustentável."""
+        self.is_running = True
+        self.logger.info("🚀 === LUMENA BOT AUTÔNOMO INICIADO (CICLO INFINITO) ===")
+
+        while self.is_running:
+            # 1. MONITORAMENTO DE BATALHA: Checa se entrou em combate
+            if self.battle_macro.in_battle():
+                self.logger.info("⚔️ Lumena selvagem encontrado! Entrando em combate...")
+                self.battle_macro.run_battle_sequence()
+                self.battle_count += 1
+                self.logger.info(f"Progresso do Ciclo: {self.battle_count}/{self.config.battles_before_heal_check} batalhas realizadas.")
+
+                # 2. ROTA AUTÔNOMA DE CURA: Ao atingir o número limite de lutas
+                if self.battle_count >= self.config.battles_before_heal_check:
+                    self.logger.info("🔋 Time precisa de restauração! Iniciando ciclo de cura na cidade...")
+                    
+                    # Passo A: Volta para a cidade
+                    self.nav_ctrl.walk_to_heal_point()
+                    
+                    # Passo B: Restaura Lumens no Cristal Azul (Sequência de Espaço)
+                    self.healing_ctrl.perform_heal()
+                    
+                    # Passo C: Atravessa o Portal Amarelo de volta para o mato
+                    self.nav_ctrl.return_to_farm_area()
+                    
+                    # Zera o contador para o próximo ciclo infinito
+                    self.battle_count = 0
+                continue
+
+            # 3. FARM NO MATO: Se não está em batalha, realiza movimento Zig-Zag com WASD
+            self.movement_ctrl.execute_step()
+            time.sleep(0.1)
 
     def stop(self) -> None:
-        if self.is_running:
-            self.is_running = False
-            if self.macro_thread and self.macro_thread.is_alive():
-                self.macro_thread.join(timeout=2.0)
-            print("\n[-] Bot PARADO.")
+        self.is_running = False
+        self.logger.info("⏹ === BOT PARADO ===")
+
+    def test_vision_system(self) -> dict[str, bool]:
+        return {
+            "fight_button.png": self.vision.template_exists("fight_button.png"),
+        }
