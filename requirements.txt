@@ -1,0 +1,12 @@
+sqlalchemy>=2.0.0
+fastapi>=0.110.0
+uvicorn>=0.28.0
+pydantic>=2.6.0
+pytest>=8.0.0
+numpy>=1.26.0
+rich>=13.7.0
+opencv-python>=4.8.0
+pyautogui>=0.9.54
+pygetwindow>=0.0.9
+mss>=9.0.1
+pillow>=10.0.0

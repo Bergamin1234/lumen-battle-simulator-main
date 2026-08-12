@@ -2,25 +2,28 @@ import json
 import logging
 import os
 import time
+from typing import List, Dict, Union
 from config.settings import BotConfig
-from src.automation.input_controller import InputController
+from src.input.input_controller import InputController
 
 
 class NavigationController:
+    """Controlador de rotas gravadas (WASD) e navegação autônoma em malha fechada."""
+
     def __init__(self, config: BotConfig, input_ctrl: InputController) -> None:
         self.config = config
         self.input_ctrl = input_ctrl
         self.logger = logging.getLogger("LumenaMacro")
         self.route_file = "config/farm_to_heal_route.json"
 
-    def save_route(self, route_data: list[dict[str, float | str]]) -> None:
+    def save_route(self, route_data: List[Dict[str, Union[float, str]]]) -> None:
         """Salva a sequência gravada de passos e curvas em um arquivo JSON."""
         os.makedirs("config", exist_ok=True)
         with open(self.route_file, "w", encoding="utf-8") as f:
             json.dump(route_data, f, indent=2)
         self.logger.info("✓ Rota de navegação gravada e salva com sucesso em config/farm_to_heal_route.json!")
 
-    def load_route(self) -> list[dict[str, float | str]]:
+    def load_route(self) -> List[Dict[str, Union[float, str]]]:
         """Carrega os passos da rota gravada."""
         if os.path.exists(self.route_file):
             try:
@@ -42,37 +45,47 @@ class NavigationController:
             self._fallback_walk(reverse)
             return
 
-        steps = reversed(route) if reverse else route
+        steps = list(reversed(route)) if reverse else list(route)
         action_type = "Volta para o Mato" if reverse else "Ida para o Cristal de Cura"
-        self.logger.info(f"🧭 Executando Rota Autônoma ({action_type})...")
+        self.logger.info(f"🧭 Executando Rota Autônoma ({action_type}) com {len(steps)} passos...")
+
+        # Garante foco no navegador antes de iniciar o replay de teclas
+        self.input_ctrl.focus_game_window()
 
         opposite_keys = {"w": "s", "s": "w", "a": "d", "d": "a"}
 
-        for step in steps:
-            key = str(step["key"])
-            duration = float(step["duration"])
+        try:
+            for idx, step in enumerate(steps, 1):
+                key = str(step["key"]).lower()
+                duration = float(step["duration"])
 
-            # Se for a rota inversa de volta, inverte a tecla da curva
-            if reverse:
-                key = opposite_keys.get(key, key)
+                if reverse:
+                    key = opposite_keys.get(key, key)
 
-            self.logger.debug(f"Passo: {key.upper()} por {duration:.2f}s")
-            self.input_ctrl.press_key(key, duration=duration)
-            time.sleep(0.1)
+                self.logger.info(f"[REPLAY] Passo {idx}/{len(steps)}: {key.upper()} por {duration:.2f}s")
+                self.input_ctrl.press_key(key, duration=duration)
+                time.sleep(0.05)
+        finally:
+            self.input_ctrl.release_all_keys()
+            self.logger.info(f"✓ Rota ({action_type}) concluída com sucesso.")
 
     def _fallback_walk(self, reverse: bool) -> None:
-        """Movimento genérico caso não exista rota gravada."""
+        """Movimento genérico de emergência caso não exista rota gravada."""
+        self.input_ctrl.focus_game_window()
         up_key = getattr(self.config.keys, "up", "w")
         down_key = getattr(self.config.keys, "down", "s")
         left_key = getattr(self.config.keys, "left", "a")
 
-        if not reverse:
-            self.input_ctrl.press_key(down_key, duration=2.5)
-            self.input_ctrl.press_key(left_key, duration=1.2)
-        else:
-            self.input_ctrl.press_key(up_key, duration=2.8)
-            time.sleep(2.0)  # Portal
-            self.input_ctrl.press_key(left_key, duration=1.5)
+        try:
+            if not reverse:
+                self.input_ctrl.press_key(down_key, duration=2.5)
+                self.input_ctrl.press_key(left_key, duration=1.2)
+            else:
+                self.input_ctrl.press_key(up_key, duration=2.8)
+                time.sleep(2.0)
+                self.input_ctrl.press_key(left_key, duration=1.5)
+        finally:
+            self.input_ctrl.release_all_keys()
 
     def walk_to_heal_point(self) -> None:
         """Caminha do Mato até o Cristal Azul na Cidade seguindo a Rota Gravada."""

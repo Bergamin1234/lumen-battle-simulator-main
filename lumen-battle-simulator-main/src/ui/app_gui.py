@@ -9,9 +9,12 @@ from PIL import Image, ImageTk
 
 from config.settings import BotConfig
 from src.automation.bot_engine import LumenaBotEngine
+from src.automation.navigation import NavigationController
+from src.input.input_controller import InputController
 
 
 class TextHandler(logging.Handler):
+    """Handler customizado que encaminha os registros de log para a fila da interface gráfica."""
     def __init__(self, log_queue: queue.Queue) -> None:
         super().__init__()
         self.log_queue = log_queue
@@ -23,7 +26,7 @@ class TextHandler(logging.Handler):
 
 class RouteRecorderWindow(tk.Toplevel):
     """Janela nativa que captura WASD para criar a rota de navegação sem dependências externas."""
-    def __init__(self, parent: tk.Tk, on_complete_callback) -> None:
+    def __init__(self, parent: tk.Tk, on_complete_callback=None) -> None:
         super().__init__(parent)
         self.title("Gravador de Rota (WASD)")
         self.geometry("520x380")
@@ -96,14 +99,12 @@ class RouteRecorderWindow(tk.Toplevel):
 
     def stop_recording(self) -> None:
         self.is_recording = False
-        from src.automation.navigation import NavigationController
-        from config.settings import BotConfig
-        from src.automation.input_controller import InputController
-
         nav = NavigationController(BotConfig.load_from_json(), InputController())
         nav.save_route(self.recorded_steps)
 
         messagebox.showinfo("Sucesso", f"Rota salva com {len(self.recorded_steps)} passos!")
+        if self.on_complete_callback:
+            self.on_complete_callback()
         self.destroy()
 
 
@@ -170,7 +171,7 @@ class LumenaAppGUI:
         lbl_title = tk.Label(title_box, text="LUMENA.GG AUTOMATION BOT", font=("Segoe UI", 15, "bold"), fg=self.accent_cyan, bg=self.card_bg)
         lbl_title.pack(anchor=tk.W)
 
-        lbl_sub = tk.Label(title_box, text="Sistema Autônomo com Gravação de Rotas e Combate", font=("Segoe UI", 9), fg=self.text_muted, bg=self.card_bg)
+        lbl_sub = tk.Label(title_box, text="Sistema Autônomo em Malha Fechada com Combate Inteligente", font=("Segoe UI", 9), fg=self.text_muted, bg=self.card_bg)
         lbl_sub.pack(anchor=tk.W)
 
         self.status_badge = tk.Label(header_frame, text="● PARADO", font=("Segoe UI", 10, "bold"), fg="#f59e0b", bg=self.card_bg, padx=15)
@@ -205,7 +206,7 @@ class LumenaAppGUI:
         self.btn_test = ttk.Button(ctrl_box, text="🔍 Testar Reconhecimento de Tela", style="Action.TButton", command=self.test_vision)
         self.btn_test.pack(fill=tk.X, pady=4)
 
-        log_box = ttk.LabelFrame(parent, text=" Terminal de Execução ", padding="10")
+        log_box = ttk.LabelFrame(parent, text=" Terminal de Execução em Tempo Real ", padding="10")
         log_box.pack(fill=tk.BOTH, expand=True, pady=(5, 0))
 
         self.log_text = scrolledtext.ScrolledText(log_box, bg="#090710", fg="#a7f3d0", font=("Consolas", 9), wrap=tk.WORD, borderwidth=0)
@@ -219,7 +220,7 @@ class LumenaAppGUI:
             "Para que o bot consiga fazer as curvas no seu mapa, atravessar o portal e ir curar:\n\n"
             "1. Clique no botão abaixo para abrir a janela de gravação.\n"
             "2. Pressione WASD na janela de gravação simulando o caminho do Mato até o Cristal.\n"
-            "3. O bot salvará os passos para repetir a rota de ida e volta sozinho!"
+            "3. O bot salvará os passos para repetir a rota de ida e volta sozinho no navegador!"
         )
         tk.Label(box, text=desc, bg=self.card_bg, fg=self.text_main, justify=tk.LEFT, font=("Segoe UI", 10)).pack(anchor=tk.W, pady=10)
 
@@ -247,11 +248,29 @@ class LumenaAppGUI:
         btn_save.grid(row=2, column=0, columnspan=2, sticky=tk.EW, pady=(15, 0))
 
     def _setup_logging(self) -> None:
-        logger = logging.getLogger("LumenaMacro")
-        logger.setLevel(logging.INFO)
+        """Configura encaminhamento global de logs de todos os subsistemas para o terminal da GUI."""
         handler = TextHandler(self.log_queue)
-        handler.setFormatter(logging.Formatter("%(asctime)s - [%(levelname)s] - %(message)s", "%H:%M:%S"))
-        logger.addHandler(handler)
+        formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", "%H:%M:%S")
+        handler.setFormatter(formatter)
+
+        # Registra o handler nos loggers de todos os módulos
+        loggers_to_attach = [
+            "LumenaMacro",
+            "LumenaCombat",
+            "LumenaPerception",
+            "LumenaMemory",
+            "LumenaInput",
+            "LumenaWindow",
+            "RealIntegrationValidation",
+        ]
+        for name in loggers_to_attach:
+            l = logging.getLogger(name)
+            l.setLevel(logging.INFO)
+            l.addHandler(handler)
+
+        # Adiciona também no root logger para capturar logs não categorizados
+        logging.getLogger().addHandler(handler)
+        logging.getLogger().setLevel(logging.INFO)
 
     def _poll_log_queue(self) -> None:
         while not self.log_queue.empty():
@@ -264,7 +283,7 @@ class LumenaAppGUI:
         try:
             self.config.battles_before_heal_check = int(self.entry_heal_battles.get())
             self.config.save_to_json()
-            messagebox.showinfo("Sucesso", "Configurações salvas!")
+            messagebox.showinfo("Sucesso", "Configurações salvas com sucesso!")
         except ValueError:
             messagebox.showerror("Erro", "Insira valores numéricos válidos.")
 
@@ -275,23 +294,35 @@ class LumenaAppGUI:
             self.stop_bot()
 
     def start_bot(self) -> None:
+        if self.is_running:
+            return
+
         self.is_running = True
         self.btn_start.configure(text="⏹ Parar Bot", style="Danger.TButton")
-        self.status_badge.configure(text="● EM EXECUÇÃO", fg="#10b981")
+        self.status_badge.configure(text="● INICIANDO...", fg="#3b82f6")
 
         self.engine = LumenaBotEngine(self.config)
         self.bot_thread = threading.Thread(target=self._run_bot_loop, daemon=True)
         self.bot_thread.start()
 
+        # Atualiza badge para ATIVO após início
+        self.root.after(500, lambda: self.status_badge.configure(text="● ATIVO", fg="#10b981") if self.is_running else None)
+
     def _run_bot_loop(self) -> None:
-        if self.engine:
-            self.engine.start()
+        try:
+            if self.engine:
+                self.engine.start()
+        except Exception as e:
+            logging.getLogger("LumenaMacro").error(f"Erro fatal na thread do bot: {e}", exc_info=True)
+            self.status_badge.configure(text="● ERRO", fg="#ef4444")
+            self.stop_bot()
 
     def stop_bot(self) -> None:
         self.is_running = False
+        self.status_badge.configure(text="● PARANDO...", fg="#eab308")
         if self.engine:
             self.engine.stop()
-        self.btn_start.configure(text="▶ Iniciar Bot", style="Primary.TButton")
+        self.btn_start.configure(text="▶ Iniciar Bot Autônomo", style="Primary.TButton")
         self.status_badge.configure(text="● PARADO", fg="#f59e0b")
 
     def test_vision(self) -> None:
@@ -300,7 +331,7 @@ class LumenaAppGUI:
     def _run_vision_test(self) -> None:
         engine = LumenaBotEngine(self.config)
         results = engine.test_vision_system()
-        msg = "\n".join([f"• {name}: {'ENCONTRADO' if found else 'NÃO ENCONTRADO'}" for name, found in results.items()])
+        msg = "\n".join([f"• {name}: {'PASSOU' if found else 'NÃO DETECTADO'}" for name, found in results.items()])
         messagebox.showinfo("Resultado da Visão Computacional", msg)
 
 
