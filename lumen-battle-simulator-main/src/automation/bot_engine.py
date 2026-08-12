@@ -25,38 +25,33 @@ class LumenaBotEngine:
         self.battle_count = 0
 
     def start(self) -> None:
-        """Loop Infinito 100% Autônomo e Auto-Sustentável."""
         self.is_running = True
-        self.logger.info("🚀 === LUMENA BOT AUTÔNOMO INICIADO (CICLO INFINITO) ===")
+        self.logger.info("🚀 === BOT INICIADO (DANDO FOCO NO NAVEGADOR) ===")
+        
+        # Garante que a janela do jogo recebe o foco do Windows
+        if not self.input_ctrl.focus_game_window():
+            self.logger.warning("⚠️ Janela 'Lumena' ou 'Chrome' não encontrada. Clique na janela do jogo para dar foco!")
 
         while self.is_running:
-            # 1. MONITORAMENTO DE BATALHA: Checa se entrou em combate
+            # 1. Checa se entrou em Batalha
             if self.battle_macro.in_battle():
-                self.logger.info("⚔️ Lumena selvagem encontrado! Entrando em combate...")
+                self.logger.info("⚔️ Batalha Detectada!")
                 self.battle_macro.run_battle_sequence()
                 self.battle_count += 1
-                self.logger.info(f"Progresso do Ciclo: {self.battle_count}/{self.config.battles_before_heal_check} batalhas realizadas.")
+                self.logger.info(f"Batalhas concluídas: {self.battle_count}/{self.config.battles_before_heal_check}")
 
-                # 2. ROTA AUTÔNOMA DE CURA: Ao atingir o número limite de lutas
+                # Se bateu o limite de batalhas, executa a Rota
                 if self.battle_count >= self.config.battles_before_heal_check:
-                    self.logger.info("🔋 Time precisa de restauração! Iniciando ciclo de cura na cidade...")
-                    
-                    # Passo A: Volta para a cidade
+                    self.logger.info("🔋 Limite de batalhas atingido! Executando Rota de Cura...")
                     self.nav_ctrl.walk_to_heal_point()
-                    
-                    # Passo B: Restaura Lumens no Cristal Azul (Sequência de Espaço)
                     self.healing_ctrl.perform_heal()
-                    
-                    # Passo C: Atravessa o Portal Amarelo de volta para o mato
                     self.nav_ctrl.return_to_farm_area()
-                    
-                    # Zera o contador para o próximo ciclo infinito
                     self.battle_count = 0
                 continue
 
-            # 3. FARM NO MATO: Se não está em batalha, realiza movimento Zig-Zag com WASD
+            # 2. Se não está em batalha, ANDA em Zig-Zag no Mato
             self.movement_ctrl.execute_step()
-            time.sleep(0.1)
+            time.sleep(0.2)
 
     def stop(self) -> None:
         self.is_running = False

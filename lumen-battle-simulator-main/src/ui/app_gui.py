@@ -5,8 +5,7 @@ import threading
 import time
 import tkinter as tk
 from tkinter import messagebox, scrolledtext, ttk
-from PIL import Image, ImageTk, ImageGrab
-import keyboard
+from PIL import Image, ImageTk
 
 from config.settings import BotConfig
 from src.automation.bot_engine import LumenaBotEngine
@@ -23,32 +22,32 @@ class TextHandler(logging.Handler):
 
 
 class RouteRecorderWindow(tk.Toplevel):
-    """Janela que captura os passos WASD do jogador para criar a rota de curvas exata."""
+    """Janela nativa que captura WASD para criar a rota de navegação sem dependências externas."""
     def __init__(self, parent: tk.Tk, on_complete_callback) -> None:
         super().__init__(parent)
-        self.title("Gravador de Rota de Navegação")
-        self.geometry("500x350")
+        self.title("Gravador de Rota (WASD)")
+        self.geometry("520x380")
         self.configure(bg="#18132b")
         self.on_complete_callback = on_complete_callback
 
         self.is_recording = False
         self.recorded_steps = []
-        self.current_key = None
-        self.key_start_time = 0
+        self.active_keys = {}
 
         self._build_ui()
+        self.bind("<KeyPress>", self.on_key_press)
+        self.bind("<KeyRelease>", self.on_key_release)
 
     def _build_ui(self) -> None:
-        lbl_title = tk.Label(self, text="GRAVADOR DE ROTA (CURVAS & PORTAL)", font=("Segoe UI", 12, "bold"), fg="#00f0ff", bg="#18132b")
+        lbl_title = tk.Label(self, text="GRAVADOR DE ROTA DE NAVEGAÇÃO", font=("Segoe UI", 12, "bold"), fg="#00f0ff", bg="#18132b")
         lbl_title.pack(pady=10)
 
         info_text = (
-            "Como usar:\n"
-            "1. Coloque o personagem no MATO DE FARM.\n"
-            "2. Clique em 'Iniciar Gravação' abaixo.\n"
-            "3. Mude para o jogo e ande normalmente (WASD) fazendo as curvas,\n"
-            "   atravessando o portal e parando em frente ao CRISTAL DE CURA.\n"
-            "4. Volte aqui e clique em 'Salvar e Finalizar'."
+            "Instruções:\n"
+            "1. Clique em 'Iniciar Gravação'.\n"
+            "2. Mantenha esta janela em foco (ou clique nela) e pressione WASD.\n"
+            "3. Faça o trajeto do MATO DE FARM até o CRISTAL DE CURA.\n"
+            "4. Clique em 'Salvar Rota'."
         )
         lbl_info = tk.Label(self, text=info_text, font=("Segoe UI", 9), fg="#e2e8f0", bg="#18132b", justify=tk.LEFT)
         lbl_info.pack(padx=20, pady=5)
@@ -56,8 +55,11 @@ class RouteRecorderWindow(tk.Toplevel):
         self.lbl_status = tk.Label(self, text="Status: Aguardando...", font=("Segoe UI", 10, "bold"), fg="#f59e0b", bg="#18132b")
         self.lbl_status.pack(pady=10)
 
+        self.lbl_count = tk.Label(self, text="Passos gravados: 0", font=("Segoe UI", 9), fg="#94a3b8", bg="#18132b")
+        self.lbl_count.pack(pady=2)
+
         btn_frame = tk.Frame(self, bg="#18132b")
-        btn_frame.pack(pady=10)
+        btn_frame.pack(pady=15)
 
         self.btn_start = ttk.Button(btn_frame, text="🔴 Iniciar Gravação", command=self.start_recording)
         self.btn_start.pack(side=tk.LEFT, padx=5)
@@ -68,53 +70,47 @@ class RouteRecorderWindow(tk.Toplevel):
     def start_recording(self) -> None:
         self.is_recording = True
         self.recorded_steps = []
-        self.lbl_status.configure(text="Status: 🔴 GRAVANDO MOVIMENTOS... Mude para o jogo e ande!", fg="#ef4444")
+        self.active_keys = {}
+        self.lbl_status.configure(text="Status: 🔴 GRAVANDO... Pressione W, A, S, D aqui nesta janela!", fg="#ef4444")
         self.btn_start.configure(state=tk.DISABLED)
         self.btn_stop.configure(state=tk.NORMAL)
+        self.focus_set()
 
-        threading.Thread(target=self._listen_keyboard, daemon=True).start()
+    def on_key_press(self, event) -> None:
+        if not self.is_recording:
+            return
+        k = event.keysym.lower()
+        if k in ['w', 'a', 's', 'd'] and k not in self.active_keys:
+            self.active_keys[k] = time.time()
 
-    def _listen_keyboard(self) -> None:
-        last_press_time = {}
-        
-        def on_key_event(event):
-            if not self.is_recording:
-                return
-            
-            k = event.name.lower()
-            if k in ['w', 'a', 's', 'd']:
-                now = time.time()
-                if event.event_type == 'down':
-                    if k not in last_press_time:
-                        last_press_time[k] = now
-                elif event.event_type == 'up':
-                    if k in last_press_time:
-                        duration = round(now - last_press_time[k], 2)
-                        if duration > 0.05:
-                            self.recorded_steps.append({"key": k, "duration": duration})
-                        del last_press_time[k]
-
-        keyboard.hook(on_key_event)
+    def on_key_release(self, event) -> None:
+        if not self.is_recording:
+            return
+        k = event.keysym.lower()
+        if k in self.active_keys:
+            start_t = self.active_keys.pop(k)
+            duration = round(time.time() - start_t, 2)
+            if duration >= 0.05:
+                self.recorded_steps.append({"key": k, "duration": duration})
+                self.lbl_count.configure(text=f"Passos gravados: {len(self.recorded_steps)}")
 
     def stop_recording(self) -> None:
         self.is_recording = False
-        keyboard.unhook_all()
-        
         from src.automation.navigation import NavigationController
         from config.settings import BotConfig
         from src.automation.input_controller import InputController
-        
+
         nav = NavigationController(BotConfig.load_from_json(), InputController())
         nav.save_route(self.recorded_steps)
-        
-        messagebox.showinfo("Sucesso", f"Rota salva com {len(self.recorded_steps)} movimentos gravados!")
+
+        messagebox.showinfo("Sucesso", f"Rota salva com {len(self.recorded_steps)} passos!")
         self.destroy()
 
 
 class LumenaAppGUI:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
-        self.root.title("Lumena.gg - Bot Autônomo v3.0")
+        self.root.title("Lumena.gg - Bot Autônomo v3.1")
         self.root.geometry("920x720")
         self.root.minsize(800, 600)
 
@@ -220,14 +216,14 @@ class LumenaAppGUI:
         box.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         desc = (
-            "Para que o bot consiga fazer as curvas perfeitas no seu mapa, atravessar o portal e chegar até a pedra de cura:\n\n"
+            "Para que o bot consiga fazer as curvas no seu mapa, atravessar o portal e ir curar:\n\n"
             "1. Clique no botão abaixo para abrir a janela de gravação.\n"
-            "2. Vá para o jogo e ande do Mato até o Cristal de Cura normalmente.\n"
-            "3. O bot salvará os seus passos exatos para repetir o caminho de ida e volta sozinho!"
+            "2. Pressione WASD na janela de gravação simulando o caminho do Mato até o Cristal.\n"
+            "3. O bot salvará os passos para repetir a rota de ida e volta sozinho!"
         )
         tk.Label(box, text=desc, bg=self.card_bg, fg=self.text_main, justify=tk.LEFT, font=("Segoe UI", 10)).pack(anchor=tk.W, pady=10)
 
-        btn_open_rec = ttk.Button(box, text="🔴 Abrir Gravador de Rota de Caminhada", style="Action.TButton", command=self.open_route_recorder)
+        btn_open_rec = ttk.Button(box, text="🔴 Abrir Gravador de Rota", style="Action.TButton", command=self.open_route_recorder)
         btn_open_rec.pack(pady=15)
 
     def open_route_recorder(self) -> None:

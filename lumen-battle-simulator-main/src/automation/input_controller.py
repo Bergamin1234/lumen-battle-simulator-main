@@ -1,28 +1,50 @@
-import random
 import time
+import logging
 import pyautogui
+import pygetwindow as gw
 
-pyautogui.FAILSAFE = True
+# Segurança do PyAutoGUI
+pyautogui.FAILSAFE = False
+pyautogui.PAUSE = 0.05
 
 
 class InputController:
-    def __init__(self, key_delay: float = 0.05) -> None:
-        self.key_delay = key_delay
+    def __init__(self) -> None:
+        self.logger = logging.getLogger("LumenaMacro")
 
-    def press_key(self, key: str, duration: float = 0.1) -> None:
-        pyautogui.keyDown(key)
+    def focus_game_window(self) -> bool:
+        """Encontra e foca a janela do navegador/jogo Lumena para que as teclas funcionem."""
+        try:
+            windows = gw.getWindowsWithTitle("Lumena")
+            if not windows:
+                windows = gw.getWindowsWithTitle("Chrome")
+
+            if windows:
+                win = windows[0]
+                if not win.isActive:
+                    win.activate()
+                    time.sleep(0.2)
+                return True
+        except Exception as e:
+            self.logger.debug(f"Aviso ao focar janela: {e}")
+        return False
+
+    def press_key(self, key: str, duration: float = 0.2) -> None:
+        """Foca o jogo e pressiona a tecla desejada (WASD / Espaço) por X segundos."""
+        self.focus_game_window()
+        key_map = {"w": "w", "a": "a", "s": "s", "d": "d", "space": "space"}
+        k = key_map.get(key.lower(), key.lower())
+
+        pyautogui.keyDown(k)
         time.sleep(duration)
-        pyautogui.keyUp(key)
-        time.sleep(self.key_delay)
+        pyautogui.keyUp(k)
 
-    def click(self, x: int, y: int, delay: float = 0.1) -> None:
-        jitter_x = x + random.randint(-2, 2)
-        jitter_y = y + random.randint(-2, 2)
-        pyautogui.click(x=jitter_x, y=jitter_y)
-        time.sleep(delay)
+    def click(self, x: int, y: int) -> None:
+        """Foca a janela e clica na coordenada exata."""
+        self.focus_game_window()
+        pyautogui.click(x, y)
 
-    def click_relative(self, base_box: tuple[int, int, int, int], offset_x: int = 0, offset_y: int = 0) -> None:
-        x, y, w, h = base_box
-        center_x = x + (w // 2) + offset_x
-        center_y = y + (h // 2) + offset_y
-        self.click(center_x, center_y)
+    def get_screen_center(self) -> tuple[int, int]:
+        """Retorna o centro da tela principal."""
+        w, h = pyautogui.size()
+        return w // 2, h // 2
