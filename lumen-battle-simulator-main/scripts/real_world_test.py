@@ -128,13 +128,17 @@ def run_real_world_test(interactive: bool = False) -> Dict[str, Any]:
 
     print(f"[OK] STEP 9: Primeiro Plano Confirmado: {focus_diag.is_truly_in_foreground}")
 
+    # Prepara diretório de evidência granular
+    ts_folder = time.strftime("%Y-%m-%d_%H-%M-%S")
+    evidence_dir = os.path.join("debug", "evidence", ts_folder)
+    os.makedirs(evidence_dir, exist_ok=True)
+
     # STEP 12: Captura de Tela BEFORE
-    os.makedirs("debug", exist_ok=True)
     sc = ScreenCapture(monitor_index=1)
     frame_before, _ = sc.capture_frame()
 
     if frame_before is not None:
-        before_path = f"debug/{time.strftime('%Y-%m-%d_%H-%M-%S')}_before.png"
+        before_path = os.path.join(evidence_dir, "before.png")
         cv2.imwrite(before_path, frame_before)
         report["step_12_screenshot_before"] = before_path
         print(f"[OK] STEP 12: Frame ANTES salvo em: {before_path}")
@@ -154,7 +158,7 @@ def run_real_world_test(interactive: bool = False) -> Dict[str, Any]:
     # STEP 15: Captura de Tela AFTER
     frame_after, _ = sc.capture_frame()
     if frame_after is not None:
-        after_path = f"debug/{time.strftime('%Y-%m-%d_%H-%M-%S')}_after.png"
+        after_path = os.path.join(evidence_dir, "after.png")
         cv2.imwrite(after_path, frame_after)
         report["step_15_screenshot_after"] = after_path
         print(f"[OK] STEP 15: Frame DEPOIS salvo em: {after_path}")
@@ -167,8 +171,11 @@ def run_real_world_test(interactive: bool = False) -> Dict[str, Any]:
         report["step_16_visual_delta"] = delta
         report["step_17_movement_confirmed"] = confirmed
 
-        # Calcula bounding box da região alterada
+        # Gera imagem da diferença (diff.png)
         diff = cv2.absdiff(frame_before, frame_after)
+        diff_path = os.path.join(evidence_dir, "diff.png")
+        cv2.imwrite(diff_path, diff)
+
         gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
         _, thresh = cv2.threshold(gray, 25, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -191,6 +198,10 @@ def run_real_world_test(interactive: bool = False) -> Dict[str, Any]:
     else:
         report["status"] = "NOT VALIDATED (Captura de tela indisponivel)"
         report["summary"] = "Captura de tela nao pode ser obtida na sessao atual."
+
+    # Salva pacotes de evidência
+    with open(os.path.join(evidence_dir, "result.json"), "w", encoding="utf-8") as f:
+        json.dump(report, f, indent=2, ensure_ascii=False)
 
     _save_report(report)
     return report

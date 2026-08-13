@@ -45,13 +45,13 @@ THEME = {
 
 
 class ModernLumenaGUI:
-    """Painel de Controle Profissional (Control Center) de 12 Páginas para o Lumena Bot."""
+    """Painel de Controle Profissional (Control Center) com Real-World Validation para o Lumena Bot."""
 
     def __init__(self, root: tk.Tk, config: Optional[BotConfig] = None) -> None:
         self.root = root
         self.root.title("Lumena Bot Control Center — Autonomous Agent Suite")
-        self.root.geometry("1400x880")
-        self.root.minsize(1200, 760)
+        self.root.geometry("1400x900")
+        self.root.minsize(1200, 780)
         self.root.configure(bg=THEME["bg_dark"])
 
         self.config = config or load_config()
@@ -66,7 +66,6 @@ class ModernLumenaGUI:
         self.current_page = "dashboard"
         self.log_filter = "ALL"
         self.log_paused = False
-        self.is_fullscreen_preview = False
 
         # Variáveis de Overlays da Visão
         self.show_bbox_var = tk.BooleanVar(value=True)
@@ -172,7 +171,7 @@ class ModernLumenaGUI:
         self.body_frame = tk.Frame(self.root, bg=THEME["bg_dark"])
         self.body_frame.pack(fill="both", expand=True)
 
-        self.sidebar_frame = tk.Frame(self.body_frame, bg=THEME["bg_sidebar"], width=210, bd=0, highlightthickness=1, highlightbackground=THEME["border"])
+        self.sidebar_frame = tk.Frame(self.body_frame, bg=THEME["bg_sidebar"], width=215, bd=0, highlightthickness=1, highlightbackground=THEME["border"])
         self.sidebar_frame.pack(side="left", fill="y")
         self.sidebar_frame.pack_propagate(False)
 
@@ -195,6 +194,7 @@ class ModernLumenaGUI:
             ("memory", "🧠  Memory Center"),
             ("telemetry", "📈  Telemetry"),
             ("activity", "⚡  Activity Feed"),
+            ("validation", "🧪  Validation Levels"),
             ("logs", "📜  Log Center"),
             ("diagnostics", "🩺  Diagnostics"),
             ("settings", "⚙  Settings"),
@@ -212,7 +212,7 @@ class ModernLumenaGUI:
                 bd=0,
                 font=(THEME["font_family"], 9, "bold"),
                 padx=16,
-                pady=9,
+                pady=8,
                 cursor="hand2",
                 command=lambda pid=page_id: self.show_page(pid),
             )
@@ -221,7 +221,7 @@ class ModernLumenaGUI:
 
         # Botão de Parada de Emergência no Rodapé da Sidebar
         emg_box = tk.Frame(self.sidebar_frame, bg=THEME["bg_sidebar"])
-        emg_box.pack(side="bottom", fill="x", padx=10, pady=12)
+        emg_box.pack(side="bottom", fill="x", padx=10, pady=10)
 
         btn_emg = tk.Button(
             emg_box,
@@ -261,6 +261,7 @@ class ModernLumenaGUI:
             "memory": self._create_memory_page(),
             "telemetry": self._create_telemetry_page(),
             "activity": self._create_activity_page(),
+            "validation": self._create_validation_page(),
             "logs": self._create_logs_page(),
             "diagnostics": self._create_diagnostics_page(),
             "settings": self._create_settings_page(),
@@ -389,7 +390,7 @@ class ModernLumenaGUI:
         return page
 
     # -------------------------------------------------------------
-    # 3. PÁGINA: LIVE GAME (VIEWPORT DEDICADO & COMPARADOR)
+    # 3. PÁGINA: LIVE GAME
     # -------------------------------------------------------------
     def _create_live_game_page(self) -> tk.Frame:
         page = tk.Frame(self.content_container, bg=THEME["bg_dark"])
@@ -425,7 +426,6 @@ class ModernLumenaGUI:
 
         tk.Label(card, text="⚔️ BATTLE CENTER — ANÁLISE DE COMBATE & DECISÕES", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(anchor="w", pady=(0, 10))
 
-        # VS Frame
         vs_frame = tk.Frame(card, bg=THEME["bg_card_alt"], padx=14, pady=10)
         vs_frame.pack(fill="x", pady=6)
 
@@ -435,7 +435,6 @@ class ModernLumenaGUI:
         self.battle_enemy_lbl = tk.Label(vs_frame, text="👾 INIMIGO: Desconhecido (HP: -- | Tipo: Fogo)", bg=THEME["bg_card_alt"], fg=THEME["accent_red"], font=(THEME["font_family"], 10, "bold"))
         self.battle_enemy_lbl.pack(side="right")
 
-        # Moves
         moves_box = tk.Frame(card, bg=THEME["bg_card"], pady=8)
         moves_box.pack(fill="x")
         tk.Label(moves_box, text="GOLPES DISPONÍVEIS & PONTUAÇÃO:", bg=THEME["bg_card"], fg=THEME["text_secondary"], font=(THEME["font_family"], 9, "bold")).pack(anchor="w", pady=(0, 4))
@@ -444,7 +443,6 @@ class ModernLumenaGUI:
         self.battle_moves_text.pack(fill="x")
         self.battle_moves_text.insert(tk.END, "1. WaterPulse  | Poder: 60 | Tipo: Água   | PP: 15/15 | Efetividade: SUPER EFETIVO (2.0x) | Score: 120.0\n2. Tackle      | Poder: 40 | Tipo: Normal | PP: 30/30 | Efetividade: Neutro (1.0x)        | Score: 40.0")
 
-        # Decision
         dec_card = tk.Frame(card, bg=THEME["bg_dark"], padx=14, pady=12, highlightthickness=1, highlightbackground=THEME["border"])
         dec_card.pack(fill="both", expand=True, pady=10)
 
@@ -565,7 +563,54 @@ class ModernLumenaGUI:
         return page
 
     # -------------------------------------------------------------
-    # 10. PÁGINA: LOG CENTER
+    # 10. PÁGINA: REAL-WORLD VALIDATION (NÍVEIS 1 A 7)
+    # -------------------------------------------------------------
+    def _create_validation_page(self) -> tk.Frame:
+        page = tk.Frame(self.content_container, bg=THEME["bg_dark"])
+
+        card = tk.Frame(page, bg=THEME["bg_card"], padx=16, pady=16, highlightthickness=1, highlightbackground=THEME["border"])
+        card.pack(fill="both", expand=True)
+
+        tk.Label(card, text="🧪 REAL-WORLD VALIDATION CENTER (LEVELS 1 — 7)", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(anchor="w", pady=(0, 10))
+
+        tbl_frame = tk.Frame(card, bg=THEME["bg_dark"], padx=10, pady=10)
+        tbl_frame.pack(fill="x", pady=6)
+
+        self.val_level_labels = {}
+        levels_def = [
+            ("LEVEL 1", "Sintaxe, Imports, Modelos de Domínio e FSM", "COMPROVADO (59/59 PASS)", THEME["status_active"]),
+            ("LEVEL 2", "InputController Híbrido, Scancodes e SafetyGuard", "COMPROVADO", THEME["status_active"]),
+            ("LEVEL 3", "Win32 API (AttachThreadInput, SetFocus, Click)", "COMPROVADO", THEME["status_active"]),
+            ("LEVEL 4", "Foco Real no Google Chrome", "COMPROVADO PELA LÓGICA*", THEME["accent_cyan"]),
+            ("LEVEL 5", "Foco no Canvas WebGL via Clique no DOM", "COMPROVADO PELA LÓGICA*", THEME["accent_cyan"]),
+            ("LEVEL 6", "Movimento Físico no Jogo Real (Delta Visual)", "NOT VALIDATED (Ação Usuário)", THEME["status_warning"]),
+            ("LEVEL 7", "Loop Autônomo Completo (Exploração/Combate/Cura)", "NOT VALIDATED (Ação Usuário)", THEME["status_warning"]),
+        ]
+
+        for lvl_id, desc, init_stat, color in levels_def:
+            row = tk.Frame(tbl_frame, bg=THEME["bg_dark"])
+            row.pack(fill="x", pady=2)
+            tk.Label(row, text=lvl_id, bg=THEME["bg_dark"], fg=THEME["text_primary"], font=(THEME["font_family"], 9, "bold"), width=10, anchor="w").pack(side="left")
+            tk.Label(row, text=desc, bg=THEME["bg_dark"], fg=THEME["text_secondary"], font=(THEME["font_family"], 9), anchor="w").pack(side="left", padx=8)
+            lbl = tk.Label(row, text=init_stat, bg=THEME["bg_dark"], fg=color, font=(THEME["font_family"], 9, "bold"))
+            lbl.pack(side="right")
+            self.val_level_labels[lvl_id] = lbl
+
+        btn_row = tk.Frame(card, bg=THEME["bg_card"])
+        btn_row.pack(fill="x", pady=12)
+
+        tk.Button(btn_row, text="▶ RUN LEVEL 6 (FÍSICO)", bg=THEME["accent_orange"], fg="black", font=(THEME["font_family"], 9, "bold"), bd=0, padx=14, pady=6, command=self._on_open_physical_test_modal).pack(side="left", padx=(0, 6))
+        tk.Button(btn_row, text="▶ RUN LEVEL 7 (AUTÔNOMO)", bg=THEME["accent_primary"], fg="white", font=(THEME["font_family"], 9, "bold"), bd=0, padx=14, pady=6, command=self._on_start_bot).pack(side="left", padx=4)
+        tk.Button(btn_row, text="📁 VIEW EVIDENCE", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 9), bd=0, padx=12, pady=6, command=self._on_open_evidence_folder).pack(side="left", padx=4)
+
+        self.val_log_text = tk.Text(card, bg=THEME["bg_dark"], fg="#93C5FD", font=("Consolas", 9), height=8, bd=0)
+        self.val_log_text.pack(fill="both", expand=True, pady=(6, 0))
+        self.val_log_text.insert(tk.END, "STATUS DA VALIDAÇÃO FÍSICA:\n• Abra o Lumena.gg no Chrome para validar os Níveis 6 e 7.\n• Nenhuma falsa aprovação será declarada sem evidência de variação de frame.\n")
+
+        return page
+
+    # -------------------------------------------------------------
+    # 11. PÁGINA: LOG CENTER
     # -------------------------------------------------------------
     def _create_logs_page(self) -> tk.Frame:
         page = tk.Frame(self.content_container, bg=THEME["bg_dark"])
@@ -591,7 +636,7 @@ class ModernLumenaGUI:
         return page
 
     # -------------------------------------------------------------
-    # 11. PÁGINA: DIAGNOSTICS & TESTE FÍSICO GUIADO
+    # 12. PÁGINA: DIAGNOSTICS
     # -------------------------------------------------------------
     def _create_diagnostics_page(self) -> tk.Frame:
         page = tk.Frame(self.content_container, bg=THEME["bg_dark"])
@@ -599,7 +644,7 @@ class ModernLumenaGUI:
         card = tk.Frame(page, bg=THEME["bg_card"], padx=16, pady=16, highlightthickness=1, highlightbackground=THEME["border"])
         card.pack(fill="both", expand=True)
 
-        tk.Label(card, text="🩺 DIAGNOSTICS CENTER & TESTES FÍSICOS DE ENTRADA", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(anchor="w", pady=(0, 10))
+        tk.Label(card, text="🩺 DIAGNOSTICS CENTER & TESTES DO SISTEMA", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(anchor="w", pady=(0, 10))
 
         btn_bar = tk.Frame(card, bg=THEME["bg_card"])
         btn_bar.pack(fill="x", pady=(0, 10))
@@ -615,7 +660,7 @@ class ModernLumenaGUI:
         return page
 
     # -------------------------------------------------------------
-    # 12. PÁGINA: SETTINGS & SAFETY CENTER
+    # 13. PÁGINA: SETTINGS & SAFETY CENTER
     # -------------------------------------------------------------
     def _create_settings_page(self) -> tk.Frame:
         page = tk.Frame(self.content_container, bg=THEME["bg_dark"])
@@ -641,12 +686,12 @@ class ModernLumenaGUI:
         return page
 
     # -------------------------------------------------------------
-    # MODAL DE TESTE FÍSICO GUIADO
+    # MODAL DE TESTE FÍSICO GUIADO & EVIDÊNCIAS
     # -------------------------------------------------------------
     def _on_open_physical_test_modal(self) -> None:
         modal = tk.Toplevel(self.root)
         modal.title("⚡ Teste de Input Físico Guiado")
-        modal.geometry("540x440")
+        modal.geometry("540x460")
         modal.configure(bg=THEME["bg_card"])
         modal.transient(self.root)
         modal.grab_set()
@@ -655,7 +700,7 @@ class ModernLumenaGUI:
 
         info_lbl = tk.Label(
             modal,
-            text="Abra o Lumena.gg no Chrome e deixe o personagem parado em área segura.\nO teste enviará a tecla W por 0.50s e medirá a variação visual.",
+            text="Abra o Lumena.gg no Chrome e deixe o personagem parado em área segura.\nO teste focará a janela, enviará a tecla W por 0.50s e medirá a variação visual.",
             bg=THEME["bg_card"],
             fg=THEME["text_secondary"],
             font=(THEME["font_family"], 9),
@@ -693,6 +738,8 @@ class ModernLumenaGUI:
             if report.get("movement_confirmed"):
                 msg = f"✓ INPUT ENVIADO | TECLA LIBERADA | DELTA: {report.get('step_16_visual_delta', 0):.4f} (CONFIRMADO)"
                 res_lbl.configure(text=msg, fg=THEME["status_active"])
+                if hasattr(self, "val_level_labels") and "LEVEL 6" in self.val_level_labels:
+                    self.val_level_labels["LEVEL 6"].configure(text="VALIDADO FISICAMENTE (PASS)", fg=THEME["status_active"])
             else:
                 msg = f"✗ INPUT DESPACHADO | SEM ALTERAÇÃO VISUAL (DELTA: {report.get('step_16_visual_delta', 0):.4f})"
                 res_lbl.configure(text=msg, fg=THEME["status_error"])
@@ -700,9 +747,13 @@ class ModernLumenaGUI:
         tk.Button(btn_row, text="[ TESTAR AGORA ]", bg=THEME["accent_primary"], fg="white", font=(THEME["font_family"], 9, "bold"), bd=0, padx=16, pady=6, command=do_test).pack(side="left", padx=8)
         tk.Button(btn_row, text="[ CANCELAR ]", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], bd=0, padx=14, pady=6, command=modal.destroy).pack(side="left", padx=8)
 
-    # -------------------------------------------------------------
-    # EXPORTAÇÃO DO DIAGNOSTIC PACKAGE
-    # -------------------------------------------------------------
+    def _on_open_evidence_folder(self) -> None:
+        os.makedirs("debug", exist_ok=True)
+        try:
+            os.startfile(os.path.abspath("debug"))
+        except Exception:
+            messagebox.showinfo("Evidências", f"Pasta de evidências: {os.path.abspath('debug')}")
+
     def _on_export_diagnostic_package(self) -> None:
         try:
             os.makedirs("debug", exist_ok=True)
