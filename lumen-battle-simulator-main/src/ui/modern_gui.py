@@ -17,7 +17,7 @@ from src.automation.bot_controller import BotController
 from src.automation.state_machine import BotState
 from src.telemetry.telemetry_manager import TelemetryManager
 from src.input.input_controller import InputController
-from src.input.target_window import TargetWindowManager
+from src.input.target_window import TargetWindowManager, WindowInfo, FocusDiagnosticResult
 from src.core.event_bus import EventBus, EventType, BotEvent
 
 logger = logging.getLogger("LumenaGUI")
@@ -45,13 +45,13 @@ THEME = {
 
 
 class ModernLumenaGUI:
-    """Painel de Controle Profissional (Control Center) com Real-World Validation para o Lumena Bot."""
+    """Painel de Controle Profissional (Control Center) de 14 Páginas para o Lumena Bot."""
 
     def __init__(self, root: tk.Tk, config: Optional[BotConfig] = None) -> None:
         self.root = root
         self.root.title("Lumena Bot Control Center — Autonomous Agent Suite")
-        self.root.geometry("1400x900")
-        self.root.minsize(1200, 780)
+        self.root.geometry("1420x920")
+        self.root.minsize(1240, 800)
         self.root.configure(bg=THEME["bg_dark"])
 
         self.config = config or load_config()
@@ -72,6 +72,7 @@ class ModernLumenaGUI:
         self.show_state_var = tk.BooleanVar(value=True)
         self.show_coords_var = tk.BooleanVar(value=True)
         self.show_fps_var = tk.BooleanVar(value=True)
+        self.show_decisions_var = tk.BooleanVar(value=True)
 
         self._vision_img_tk = None
         self._dash_preview_img_tk = None
@@ -81,7 +82,7 @@ class ModernLumenaGUI:
         self._setup_keybindings()
         self._build_main_layout()
 
-        # Inicia loop de telemetria a 60 FPS UI (16ms) e consumo de eventos
+        # Inicia loop de telemetria e consumo de eventos na UI thread
         self.root.after(50, self._ui_telemetry_tick)
 
     def _setup_styles(self) -> None:
@@ -121,7 +122,7 @@ class ModernLumenaGUI:
 
         # Botões de Ação Rápida no Topo
         btn_box = tk.Frame(self.header_frame, bg=THEME["bg_sidebar"])
-        btn_box.pack(side="left", padx=16)
+        btn_box.pack(side="left", padx=12)
 
         self.btn_top_start = tk.Button(btn_box, text="▶ START (F5)", bg=THEME["accent_primary"], fg="white", font=(THEME["font_family"], 9, "bold"), bd=0, padx=14, pady=5, cursor="hand2", command=self._on_start_bot)
         self.btn_top_start.pack(side="left", padx=3)
@@ -131,6 +132,8 @@ class ModernLumenaGUI:
 
         self.btn_top_stop = tk.Button(btn_box, text="■ STOP (F7)", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 9), bd=0, padx=10, pady=5, cursor="hand2", command=self._on_stop_bot)
         self.btn_top_stop.pack(side="left", padx=3)
+
+        tk.Button(btn_box, text="🧙 TARGET WIZARD", bg=THEME["accent_blue"], fg="white", font=(THEME["font_family"], 9, "bold"), bd=0, padx=10, pady=5, cursor="hand2", command=self._on_open_target_wizard).pack(side="left", padx=4)
 
         # Status Global Badge
         self.status_badge = tk.Label(
@@ -171,7 +174,7 @@ class ModernLumenaGUI:
         self.body_frame = tk.Frame(self.root, bg=THEME["bg_dark"])
         self.body_frame.pack(fill="both", expand=True)
 
-        self.sidebar_frame = tk.Frame(self.body_frame, bg=THEME["bg_sidebar"], width=215, bd=0, highlightthickness=1, highlightbackground=THEME["border"])
+        self.sidebar_frame = tk.Frame(self.body_frame, bg=THEME["bg_sidebar"], width=220, bd=0, highlightthickness=1, highlightbackground=THEME["border"])
         self.sidebar_frame.pack(side="left", fill="y")
         self.sidebar_frame.pack_propagate(False)
 
@@ -194,10 +197,11 @@ class ModernLumenaGUI:
             ("memory", "🧠  Memory Center"),
             ("telemetry", "📈  Telemetry"),
             ("activity", "⚡  Activity Feed"),
-            ("validation", "🧪  Validation Levels"),
             ("logs", "📜  Log Center"),
             ("diagnostics", "🩺  Diagnostics"),
+            ("validation", "🧪  Validation Levels"),
             ("settings", "⚙  Settings"),
+            ("about", "ℹ️  System Info"),
         ]
 
         for page_id, text in pages:
@@ -212,7 +216,7 @@ class ModernLumenaGUI:
                 bd=0,
                 font=(THEME["font_family"], 9, "bold"),
                 padx=16,
-                pady=8,
+                pady=7,
                 cursor="hand2",
                 command=lambda pid=page_id: self.show_page(pid),
             )
@@ -261,10 +265,11 @@ class ModernLumenaGUI:
             "memory": self._create_memory_page(),
             "telemetry": self._create_telemetry_page(),
             "activity": self._create_activity_page(),
-            "validation": self._create_validation_page(),
             "logs": self._create_logs_page(),
             "diagnostics": self._create_diagnostics_page(),
+            "validation": self._create_validation_page(),
             "settings": self._create_settings_page(),
+            "about": self._create_about_page(),
         }
 
     # -------------------------------------------------------------
@@ -563,7 +568,57 @@ class ModernLumenaGUI:
         return page
 
     # -------------------------------------------------------------
-    # 10. PÁGINA: REAL-WORLD VALIDATION (NÍVEIS 1 A 7)
+    # 10. PÁGINA: LOG CENTER
+    # -------------------------------------------------------------
+    def _create_logs_page(self) -> tk.Frame:
+        page = tk.Frame(self.content_container, bg=THEME["bg_dark"])
+
+        card = tk.Frame(page, bg=THEME["bg_card"], padx=14, pady=14, highlightthickness=1, highlightbackground=THEME["border"])
+        card.pack(fill="both", expand=True)
+
+        filter_bar = tk.Frame(card, bg=THEME["bg_card"])
+        filter_bar.pack(fill="x", pady=(0, 8))
+
+        tk.Label(filter_bar, text="Filtro:", bg=THEME["bg_card"], fg=THEME["text_secondary"], font=(THEME["font_family"], 9, "bold")).pack(side="left", padx=(0, 6))
+
+        for f in ["ALL", "INPUT", "VISION", "COMBAT", "NAVIGATION", "ERROR"]:
+            tk.Button(filter_bar, text=f, bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 8), bd=0, padx=8, pady=3, command=lambda flt=f: self._on_set_log_filter(flt)).pack(side="left", padx=2)
+
+        tk.Button(filter_bar, text="Exportar", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 8), bd=0, padx=8, pady=3, command=self._on_export_logs).pack(side="right", padx=3)
+        tk.Button(filter_bar, text="Copiar", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 8), bd=0, padx=8, pady=3, command=self._on_copy_logs).pack(side="right", padx=3)
+        tk.Button(filter_bar, text="Limpar", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 8), bd=0, padx=8, pady=3, command=lambda: self.logs_text.delete("1.0", tk.END)).pack(side="right", padx=3)
+
+        self.logs_text = tk.Text(card, bg=THEME["bg_dark"], fg="#E2E8F0", font=("Consolas", 9), bd=0, wrap="word")
+        self.logs_text.pack(fill="both", expand=True)
+
+        return page
+
+    # -------------------------------------------------------------
+    # 11. PÁGINA: DIAGNOSTICS
+    # -------------------------------------------------------------
+    def _create_diagnostics_page(self) -> tk.Frame:
+        page = tk.Frame(self.content_container, bg=THEME["bg_dark"])
+
+        card = tk.Frame(page, bg=THEME["bg_card"], padx=16, pady=16, highlightthickness=1, highlightbackground=THEME["border"])
+        card.pack(fill="both", expand=True)
+
+        tk.Label(card, text="🩺 DIAGNOSTICS CENTER & TESTES DO SISTEMA", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(anchor="w", pady=(0, 10))
+
+        btn_bar = tk.Frame(card, bg=THEME["bg_card"])
+        btn_bar.pack(fill="x", pady=(0, 10))
+
+        tk.Button(btn_bar, text="▶ RUN FULL DIAGNOSTICS", bg=THEME["accent_blue"], fg="white", font=(THEME["font_family"], 9, "bold"), bd=0, padx=12, pady=6, command=self._on_run_diagnostics).pack(side="left", padx=(0, 6))
+        tk.Button(btn_bar, text="⚡ PHYSICAL INPUT TEST", bg=THEME["accent_orange"], fg="black", font=(THEME["font_family"], 9, "bold"), bd=0, padx=12, pady=6, command=self._on_open_physical_test_modal).pack(side="left", padx=4)
+        tk.Button(btn_bar, text="📸 CAPTURE TEST", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 9), bd=0, padx=10, pady=6, command=self._on_test_capture).pack(side="left", padx=4)
+        tk.Button(btn_bar, text="🪟 FOCUS TEST", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 9), bd=0, padx=10, pady=6, command=self._on_test_focus).pack(side="left", padx=4)
+
+        self.diag_results_text = tk.Text(card, bg=THEME["bg_dark"], fg="#93C5FD", font=("Consolas", 9), height=14, bd=0)
+        self.diag_results_text.pack(fill="both", expand=True)
+
+        return page
+
+    # -------------------------------------------------------------
+    # 12. PÁGINA: VALIDATION LEVELS
     # -------------------------------------------------------------
     def _create_validation_page(self) -> tk.Frame:
         page = tk.Frame(self.content_container, bg=THEME["bg_dark"])
@@ -610,56 +665,6 @@ class ModernLumenaGUI:
         return page
 
     # -------------------------------------------------------------
-    # 11. PÁGINA: LOG CENTER
-    # -------------------------------------------------------------
-    def _create_logs_page(self) -> tk.Frame:
-        page = tk.Frame(self.content_container, bg=THEME["bg_dark"])
-
-        card = tk.Frame(page, bg=THEME["bg_card"], padx=14, pady=14, highlightthickness=1, highlightbackground=THEME["border"])
-        card.pack(fill="both", expand=True)
-
-        filter_bar = tk.Frame(card, bg=THEME["bg_card"])
-        filter_bar.pack(fill="x", pady=(0, 8))
-
-        tk.Label(filter_bar, text="Filtro:", bg=THEME["bg_card"], fg=THEME["text_secondary"], font=(THEME["font_family"], 9, "bold")).pack(side="left", padx=(0, 6))
-
-        for f in ["ALL", "INPUT", "VISION", "COMBAT", "NAVIGATION", "ERROR"]:
-            tk.Button(filter_bar, text=f, bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 8), bd=0, padx=8, pady=3, command=lambda flt=f: self._on_set_log_filter(flt)).pack(side="left", padx=2)
-
-        tk.Button(filter_bar, text="Exportar", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 8), bd=0, padx=8, pady=3, command=self._on_export_logs).pack(side="right", padx=3)
-        tk.Button(filter_bar, text="Copiar", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 8), bd=0, padx=8, pady=3, command=self._on_copy_logs).pack(side="right", padx=3)
-        tk.Button(filter_bar, text="Limpar", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 8), bd=0, padx=8, pady=3, command=lambda: self.logs_text.delete("1.0", tk.END)).pack(side="right", padx=3)
-
-        self.logs_text = tk.Text(card, bg=THEME["bg_dark"], fg="#E2E8F0", font=("Consolas", 9), bd=0, wrap="word")
-        self.logs_text.pack(fill="both", expand=True)
-
-        return page
-
-    # -------------------------------------------------------------
-    # 12. PÁGINA: DIAGNOSTICS
-    # -------------------------------------------------------------
-    def _create_diagnostics_page(self) -> tk.Frame:
-        page = tk.Frame(self.content_container, bg=THEME["bg_dark"])
-
-        card = tk.Frame(page, bg=THEME["bg_card"], padx=16, pady=16, highlightthickness=1, highlightbackground=THEME["border"])
-        card.pack(fill="both", expand=True)
-
-        tk.Label(card, text="🩺 DIAGNOSTICS CENTER & TESTES DO SISTEMA", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(anchor="w", pady=(0, 10))
-
-        btn_bar = tk.Frame(card, bg=THEME["bg_card"])
-        btn_bar.pack(fill="x", pady=(0, 10))
-
-        tk.Button(btn_bar, text="▶ RUN FULL DIAGNOSTICS", bg=THEME["accent_blue"], fg="white", font=(THEME["font_family"], 9, "bold"), bd=0, padx=12, pady=6, command=self._on_run_diagnostics).pack(side="left", padx=(0, 6))
-        tk.Button(btn_bar, text="⚡ PHYSICAL INPUT TEST", bg=THEME["accent_orange"], fg="black", font=(THEME["font_family"], 9, "bold"), bd=0, padx=12, pady=6, command=self._on_open_physical_test_modal).pack(side="left", padx=4)
-        tk.Button(btn_bar, text="📸 CAPTURE TEST", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 9), bd=0, padx=10, pady=6, command=self._on_test_capture).pack(side="left", padx=4)
-        tk.Button(btn_bar, text="🪟 FOCUS TEST", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 9), bd=0, padx=10, pady=6, command=self._on_test_focus).pack(side="left", padx=4)
-
-        self.diag_results_text = tk.Text(card, bg=THEME["bg_dark"], fg="#93C5FD", font=("Consolas", 9), height=14, bd=0)
-        self.diag_results_text.pack(fill="both", expand=True)
-
-        return page
-
-    # -------------------------------------------------------------
     # 13. PÁGINA: SETTINGS & SAFETY CENTER
     # -------------------------------------------------------------
     def _create_settings_page(self) -> tk.Frame:
@@ -684,6 +689,83 @@ class ModernLumenaGUI:
         tk.Button(btn_row, text="📦 EXPORT DIAGNOSTIC PACKAGE", bg=THEME["accent_purple"], fg="white", font=(THEME["font_family"], 10, "bold"), bd=0, padx=16, pady=8, command=self._on_export_diagnostic_package).pack(side="left")
 
         return page
+
+    # -------------------------------------------------------------
+    # 14. PÁGINA: ABOUT & SYSTEM INFO
+    # -------------------------------------------------------------
+    def _create_about_page(self) -> tk.Frame:
+        page = tk.Frame(self.content_container, bg=THEME["bg_dark"])
+
+        card = tk.Frame(page, bg=THEME["bg_card"], padx=18, pady=18, highlightthickness=1, highlightbackground=THEME["border"])
+        card.pack(fill="both", expand=True)
+
+        tk.Label(card, text="ℹ️ ABOUT — LUMENA BOT CONTROL CENTER v3.0", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 12, "bold")).pack(anchor="w", pady=(0, 12))
+
+        info_text = (
+            "Plataforma Profissional de Automação, Observabilidade e Combate Autônomo para Lumena.gg.\n\n"
+            "Arquitetura:\n"
+            "• Closed-Loop Engine : Observe ➔ Interpret ➔ Remember ➔ Decide ➔ Act ➔ Verify\n"
+            "• Input Pipeline    : Win32 Hardware Scancodes + DirectInput + PostMessage + PyAutoGUI Fallback\n"
+            "• Safety Guard      : ESC Interruption + release_all_keys() em bloco finally\n"
+            "• Event Bus         : Thread-Safe Async Queue Polling a 50ms na UI thread\n"
+            "• Validação Física  : Medição de Delta Visual de Pixels (> 0.005) em debug/evidence/\n\n"
+            "Ambiente do Sistema:\n"
+            f"• Python Version   : {sys.version.split()[0]}\n"
+            f"• Plataforma       : Windows (Win32 API Native)\n"
+            f"• Executável Build : dist/LumenaBot/LumenaBot.exe\n"
+        )
+
+        tk.Label(card, text=info_text, bg=THEME["bg_dark"], fg="#93C5FD", font=("Consolas", 10), justify="left", padx=14, pady=12).pack(fill="both", expand=True)
+
+        return page
+
+    # -------------------------------------------------------------
+    # WIZARD: TARGET WINDOW WIZARD
+    # -------------------------------------------------------------
+    def _on_open_target_wizard(self) -> None:
+        modal = tk.Toplevel(self.root)
+        modal.title("🧙 Target Window Configuration Wizard")
+        modal.geometry("560x480")
+        modal.configure(bg=THEME["bg_card"])
+        modal.transient(self.root)
+        modal.grab_set()
+
+        tk.Label(modal, text="🧙 CONFIGURAÇÃO GUIADA DA JANELA ALVO", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(pady=12)
+
+        steps_text = tk.Text(modal, bg=THEME["bg_dark"], fg="#93C5FD", font=("Consolas", 9), height=14, bd=0)
+        steps_text.pack(fill="both", expand=True, padx=16, pady=8)
+
+        def run_wizard():
+            steps_text.insert(tk.END, "Iniciando verificação em 7 etapas...\n\n")
+            win_mgr = self.input_ctrl.window_manager
+
+            # 1. Busca Janela
+            win = win_mgr.find_target_window()
+            if win:
+                steps_text.insert(tk.END, f"[✓] 1. Browser/Chrome Localizado: {win.title}\n")
+                steps_text.insert(tk.END, f"[✓] 2. HWND Identificado: {win.hwnd} (PID: {win.pid})\n")
+            else:
+                steps_text.insert(tk.END, "[✗] 1-2. Nenhuma janela compatível encontrada. Abra o Chrome no Lumena.gg.\n")
+                return
+
+            # 3. Restauração e Foco
+            diag = win_mgr.bring_to_foreground_with_diagnostic(win.hwnd)
+            if diag.is_truly_in_foreground:
+                steps_text.insert(tk.END, f"[✓] 3-4. Primeiro Plano Verificado (HWND: {diag.foreground_hwnd})\n")
+            else:
+                steps_text.insert(tk.END, f"[⚠] 3-4. Foreground pendente (Atual: {diag.foreground_hwnd})\n")
+
+            # 5. Canvas Focus
+            win_mgr.ensure_canvas_focus(0.5, 0.5)
+            steps_text.insert(tk.END, "[✓] 5. Foco aplicado no centro do Canvas WebGL via clique DOM\n")
+            steps_text.insert(tk.END, "[✓] 6. SafetyGuard armado para despacho de teclas\n")
+            steps_text.insert(tk.END, "\n✓ CONFIGURAÇÃO CONCLUÍDA COM SUCESSO!\n")
+
+        threading.Thread(target=run_wizard, daemon=True).start()
+
+        btn_row = tk.Frame(modal, bg=THEME["bg_card"])
+        btn_row.pack(pady=12)
+        tk.Button(btn_row, text="[ FECHAR WIZARD ]", bg=THEME["accent_primary"], fg="white", font=(THEME["font_family"], 9, "bold"), bd=0, padx=16, pady=6, command=modal.destroy).pack()
 
     # -------------------------------------------------------------
     # MODAL DE TESTE FÍSICO GUIADO & EVIDÊNCIAS

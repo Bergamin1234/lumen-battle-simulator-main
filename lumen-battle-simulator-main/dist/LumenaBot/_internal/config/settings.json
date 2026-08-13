@@ -1,0 +1,21 @@
+{
+  "window_title": "Lumena.gg",
+  "confidence": 0.8,
+  "templates_dir": "templates",
+  "logs_dir": "logs",
+  "movement_pattern": "zigzag",
+  "step_duration": 0.35,
+  "battle_timeout": 35.0,
+  "attack_delay": 0.8,
+  "monitor": 1,
+  "battles_before_heal_check": 5,
+  "keys": {
+    "up": "w",
+    "down": "s",
+    "left": "a",
+    "right": "d",
+    "interact": "e"
+  },
+  "route_to_heal": [],
+  "route_to_farm": []
+}

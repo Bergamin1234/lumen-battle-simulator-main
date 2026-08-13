@@ -1,100 +1,81 @@
-# Auditoria de Arquitetura — Lumena Bot
+# ARCHITECTURE AUDIT — LUMENA BOT CONTROL CENTER v3.0
 
-**Data:** 2026-08-13  
-**Status do Projeto:** Transição para Sistema Autônomo Integrado de Alta Fidelidade
+## 1. Inventário Completo de Módulos e Responsabilidades
+
+### A. Núcleo de Automação e Lifecycle (`src/automation/`)
+- `bot_engine.py` (**LumenaBotEngine — SSOT**): Único motor ativo de ciclo contínuo em malha fechada (*Observe ➔ Interpret ➔ Remember ➔ Decide ➔ Act ➔ Verify*).
+- `bot_controller.py` (**BotController**): Gerenciador thread-safe do ciclo de vida do motor, controle de thread em background e ponte oficial para a GUI.
+- `state_machine.py` (**BotStateMachine**): FSM centralizada com transições formais validadas e publicação no `EventBus`.
+- `navigation.py` (**NavigationController & RouteManager**): Gravação de rotas, timeline de passos (`STEP | KEY | DURATION`), replay, reversão e desengate anti-stuck.
+
+### B. Camada de Entrada Física e Foco (`src/input/`)
+- `input_controller.py` (**InputController**): Orquestrador híbrido com medição de delta de frames antes/depois e controle de feedback visual.
+- `target_window.py` (**TargetWindowManager**): Busca de janelas por título/classe, restauração `SW_RESTORE`, elevação via `AttachThreadInput` e clique calibrado no centro do canvas WebGL.
+- `safety_guard.py` (**SafetyGuard**): Bloqueio de envio em janelas não confirmadas, liberação atômica em bloco `finally` e parada imediata via **ESC**.
+- `input_backend.py` (**InputBackend, Win32InputBackend, PyAutoGUIInputBackend**): Despacho de scancodes de hardware DirectInput (`0x11` W, `0x1E` A, `0x1F` S, `0x20` D, `0x39` Space, `0x1C` Enter), `keybd_event` e `PostMessageW`.
+
+### C. Camada de Percepção e Visão (`src/perception/`)
+- `screen_capture.py` (**ScreenCapture**): Captura multi-monitor via MSS e cálculo de variação entre frames.
+- `state_classifier.py` (**StateClassifier**): Classificação de telas (*Exploring, Battle, Healing, Dialog, Victory, Defeat*).
+- `battle_detector.py`, `landmark_detector.py`, `ui_detector.py`, `world_detector.py`, `ocr.py`: Detectores semânticos com suporte a templates e heurísticas de cor/contorno.
+
+### D. Camada de Combate Inteligente (`src/combat/`)
+- `combat_agent.py` (**CombatAgent**): Tomada de decisão por fraquezas elementais, controle de PP, troca de Lumen e priorização.
+- `decision_engine.py` (**DecisionEngine**): Avaliação de multiplicadores de dano e pontuação determinística.
+- `action_executor.py` (**ActionExecutor**): Tradução de intenções de combate em sequências de input físico.
+
+### E. Camada de Memória Topológica (`src/memory/`)
+- `memory_manager.py` (**MemoryManager**): Integração de snapshots em memória operacional e persistente.
+- `world_memory.py` (**WorldMemory**): Coordenadas $(X, Y)$, heading, âncoras/marcos, obstáculos e células exploradas.
+- `experience_store.py` (**ExperienceStore**): Histórico de encontros e aprendizado de eficácia.
+
+### F. Barramento Transversal e Telemetria (`src/core/` & `src/telemetry/`)
+- `src/core/event_bus.py` (**EventBus**): Barramento assíncrono thread-safe com filas `queue.Queue` para a interface.
+- `src/telemetry/telemetry_manager.py` (**TelemetryManager**): Métricas em tempo real de FPS, latências por subsistema, APM, vitórias/derrotas e recuperações.
+
+### G. Interface Gráfica Profissional (`src/ui/`)
+- `modern_gui.py` (**ModernLumenaGUI**): Control Center completo com 14 páginas, status bar inferior e monitoramento a 50ms.
 
 ---
 
-## 1. Diagnóstico do Estado Anterior
+## 2. Diagnóstico de Código Morto e Módulos Legados
 
-| Componente | Estado Anterior | Problemas Identificados |
-|---|---|---|
-| **Ponto de Entrada (GUI)** | `src/ui/app_gui.py` | Instanciava motor legado de macro determinístico sem vínculo com as camadas das Fases 1 a 4. Logs restritos apenas ao logger `LumenaMacro`. |
-| **Ponto de Entrada (CLI/Scripts)** | `scripts/` e `main.py` | Desconexão entre a interface visual e os scripts de teste. |
-| **Entrada Física (InputController)** | `src/input/input_controller.py` | Dependência inicial de `SendInput` com falhas de privilégio UIPI (Error 5) no Chromium e ausência de foco garantido no canvas WebGL. |
-| **Gerenciamento de Janela** | `src/input/target_window.py` | Foco de janela básico sem detecção de DPI/escala, sem clique de ativação no DOM do Chrome e sem enumeração de `RenderWidgetHost`. |
-| **Motor Principal** | `src/automation/bot_engine.py` | Loop simples sem máquina de estados formal, sem telemetria em tempo real e sem suporte a modo manual/assistido. |
-| **Interface Visual** | `src/ui/app_gui.py` | Layout com poucas abas, sem visão computacional em tempo real, sem mapa de memória visual, sem diagnóstico integrado. |
-| **Tratamento de Exceções** | Distribuído | Exceções podiam interromper loops silenciosamente sem acionar rotinas de recuperação ou gravação de screenshot de debug. |
+1. **`src/ai/automation/`:** Contém apenas arquivos placeholders sem implementação. Não participam do fluxo oficial do bot e estão explicitamente isolados.
+2. **`src/legacy/`:** Mantido apenas para compatibilidade de testes legados. Não há chamadas ativas do `LumenaBotEngine` para este diretório.
+3. **`src/automation/input_controller.py`:** Atua como um shim de reexportação para `src.input.input_controller` para garantir que nenhum teste legado quebre.
 
 ---
 
-## 2. Mapa de Dependências Alvo
+## 3. Matriz de Conexão: GUI ➔ Backend ➔ Jogo
 
 ```
-                         ┌────────────────────────────────────────┐
-                         │          src/ui/modern_gui.py          │
-                         │    (Dashboard, Battle, Vision, etc.)   │
-                         └───────────────────┬────────────────────┘
-                                             │ Eventos e Telemetria (Queue)
-                                             ▼
-                         ┌────────────────────────────────────────┐
-                         │   src/automation/bot_controller.py     │
-                         │   (Thread-Safe, Emergency Stop, FSM)   │
-                         └───────────────────┬────────────────────┘
-                                             │
-                                             ▼
-                         ┌────────────────────────────────────────┐
-                         │     src/automation/bot_engine.py       │
-                         │     (Closed-Loop Autonomous Engine)    │
-                         └───────────────────┬────────────────────┘
-                                             │
-      ┌────────────────────────┬─────────────┴────────────┬────────────────────────┐
-      ▼                        ▼                          ▼                        ▼
-┌──────────────┐      ┌─────────────────┐       ┌──────────────────┐     ┌──────────────────┐
-│  Perception  │      │     Memory      │       │     Decision     │     │    Navigation    │
-│ScreenCapture │      │  MemoryManager  │       │   CombatAgent    │     │Route Manager     │
-│StateClassif. │      │   WorldMemory   │       │ DecisionEngine   │     │MovementController│
-│  UIDetector  │      │ ExperienceStore │       │  ActionExecutor  │     │WASD Replay       │
-└──────┬───────┘      └────────┬────────┘       └─────────┬────────┘     └────────┬─────────┘
-       └───────────────────────┼──────────────────────────┴───────────────────────┘
-                               ▼
-                    ┌───────────────────────┐
-                    │ src/input/safety.py   │
-                    │    Safety Guard       │
-                    └──────────┬────────────┘
-                               ▼
-                    ┌───────────────────────┐
-                    │ src/input/controller  │
-                    │    InputController    │
-                    └──────────┬────────────┘
-                               ▼
-             ┌─────────────────┴─────────────────┐
-             ▼                                   ▼
-┌─────────────────────────┐             ┌─────────────────┐
-│   Win32InputBackend     │             │ PyAutoGUIBackend│
-│ (Scancodes, keybd_event,│             │   (Fallback)    │
-│  PostMessage, Canvas)   │             └─────────────────┘
-└────────────┬────────────┘
-             ▼
-┌─────────────────────────┐
-│ Google Chrome (Canvas)  │
-└─────────────────────────┘
+ModernLumenaGUI (Tkinter Mainloop)
+    │
+    │ Polling a cada 50ms via self.gui_event_queue.get_nowait()
+    ▼
+EventBus (Core) ◄─── Publicações Assíncronas ─── LumenaBotEngine & Subsystems
+    │
+    ▼ Comandos do Usuário (Start, Stop, Pause, D-Pad, Routes)
+BotController (Worker Thread)
+    │
+    ▼
+LumenaBotEngine (Closed-Loop Principal)
+    │ 1. ScreenCapture.capture_frame() ➔ Frame Before
+    │ 2. StateClassifier.classify_frame() ➔ StateSnapshot
+    │ 3. MemoryManager.update_from_snapshot()
+    │ 4. CombatAgent / NavigationController.decide()
+    │ 5. ActionExecutor.execute() ➔ InputController
+    │ 6. TargetWindowManager.verify_foreground() ➔ Win32 SendInput (Scancodes)
+    │ 7. ScreenCapture.capture_frame() ➔ Frame After
+    │ 8. InputController.compute_visual_delta() ➔ Verificação de Deslocamento
+    ▼
+Evidence Package ➔ debug/evidence/<timestamp>/ (before.png, after.png, diff.png, result.json)
 ```
 
 ---
 
-## 3. Riscos e Mitigações
+## 4. Estado dos Testes Unitários e Integrados
 
-1. **Risco de Foco no Chrome:** O Chrome pode ignorar teclas se o canvas perder o foco.
-   - *Mitigação:* `TargetWindowManager` executa sequência `SW_RESTORE` ➔ `AttachThreadInput` ➔ `SetForegroundWindow` ➔ `SetFocus` ➔ clique físico no canvas (`mouse_event`).
-2. **Risco de Bloqueio da GUI por Threading:**
-   - *Mitigação:* A GUI comunica-se com a thread do bot exclusivamente através de `queue.Queue` thread-safe, com polling de 50ms via `root.after()`.
-3. **Risco de Travamento em Batalha ou Percepção:**
-   - *Mitigação:* Timeouts em todas as micro-ações, limite de turnos máximos, fallbacks heurísticos e salvamento de screenshot de debug em `debug/`.
-4. **Risco de DPI e Escala no Windows:**
-   - *Mitigação:* Detecção de DPI via Win32 `GetDpiForWindow` e normalização das coordenadas relativas da janela.
-
----
-
-## 4. Plano de Migração Incremental
-
-- **Fase 1:** Camada de Entrada e Segurança (`InputBackend`, `InputController`, `TargetWindowManager`, `SafetyGuard`).
-- **Fase 2:** Máquina de Estados e Telemetria (`AgentState`, `BotStateMachine`, `TelemetryManager`).
-- **Fase 3:** Motor Unificado (`LumenaBotEngine`, `BotController`).
-- **Fase 4:** Navegação e Gravador de Rotas Avançado (`NavigationController`, editor visual de rotas).
-- **Fase 5:** Percepção e Visão Computacional com Anotações em Frame.
-- **Fase 6:** Interface Gráfica Moderna Completa com 9 Páginas e Tema Dark.
-- **Fase 7:** Scripts de Diagnóstico e Validação Física.
-- **Fase 8:** Suíte de Testes Unitários e Integração.
-- **Fase 9:** Empacotamento PyInstaller e Documentação Técnica.
+- Total de testes identificados e validados: **59 testes**.
+- Taxa de sucesso atual: **100% (59/59 PASS)**.
+- Módulos testados: `CombatAgent`, `Perception`, `MemoryLayer`, `Evolution`, `InputController`, `SafetyGuard`, `StateMachine`, `Telemetry`, `RouteManager`, `ClosedLoop`, `EventBus`.

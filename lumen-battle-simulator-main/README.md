@@ -1,50 +1,80 @@
-# Lumena Bot — Plataforma de Automação & Combate Inteligente
+# ⚡ Lumena Bot Control Center v3.0
 
-O **Lumena Bot** é uma aplicação desktop autônoma em malha fechada (*closed-loop*) projetada para controle em tempo real, percepção multimodal, navegação no mundo aberto e combate automatizado para o jogo **Lumena.gg** no Google Chrome (Windows).
+> **Production-Grade Closed-Loop Autonomous Automation Platform for Lumena.gg**
 
----
-
-## 🚀 Funcionalidades Principais
-
-- **Interface Desktop Profissional em 10 Páginas:**
-  - **◉ Dashboard:** Live Game View com overlays semânticos, 6 cards de telemetria em tempo real e Live Activity Feed.
-  - **🤖 Bot Control:** Seleção de modos (*Manual, Assisted, Autonomous*), D-Pad físico virtual e parâmetros de temporização.
-  - **⚔ Battle:** Monitor de combate com acompanhamento de fraquezas elementares, PP, HP e razão das decisões da IA.
-  - **🧭 Navigation:** Gerenciador de rotas gravadas, tabela passo a passo (`STEP | KEY | DURATION`), replay e inversão automática.
-  - **👁 Vision:** Preview ao vivo com overlays (`[PLAYER]`, `[ENEMY]`, `[HP]`, `[FIGHT]`, `[CRYSTAL]`, `[DIALOG]`) e botão para salvar frame de depuração em `debug/`.
-  - **🧠 Memory:** Posição topológica em tempo real, marcos (*landmarks*), obstáculos e histórico de experiência.
-  - **📈 Telemetry:** Métricas operacionais em tempo real (FPS, latência de ação em ms, vitórias/derrotas, recuperações).
-  - **📜 Logs:** Terminal visual multi-canal com filtros (*ALL, INPUT, VISION, COMBAT, NAVIGATION, ERROR*), busca, cópia e exportação.
-  - **🩺 Diagnostics:** Varredura completa do sistema com badges (*PASS, WARN, FAIL*) e modal de **⚡ TESTE DE INPUT FÍSICO GUIADO**.
-  - **⚙ Settings:** Presets rápidos (*SAFE, BALANCED, AGGRESSIVE, DEBUG*) e persistência em `config/settings.json`.
-- **Despacho Físico de Entrada Win32:** Injeção de scancodes de hardware DirectInput (`0x11` para W, `0x1E` para A, `0x1F` para S, `0x20` para D, `0x39` para Space, `0x1C` para Enter), DirectInput `keybd_event`, `PostMessageW` e fallback PyAutoGUI.
-- **SafetyGuard & Parada Imediata:** A tecla **ESC** ou o botão vermelho da interface interrompem imediatamente qualquer ação e executam `release_all_keys()` garantido em bloco `finally`.
-- **Validação de Feedback Visual (Closed Loop):** Cálculo de delta de pixels antes/depois de cada ação ($> 0.005$) para confirmação real de movimento físico.
-- **Executável Portátil:** Distribuição binária para Windows gerada via PyInstaller (`dist/LumenaBot/LumenaBot.exe`).
+![Lumena Bot Banner](logo.png.png)
 
 ---
 
-## 🛠️ Como Executar
+## 📖 Visão Geral
 
-### Opção 1: Executável Compilado (Recomendado)
+O **Lumena Bot Control Center v3.0** é uma plataforma modular de automação em malha fechada (*closed-loop*), visão computacional, telemetria em tempo real e combate inteligente projetada para o jogo WebGL **Lumena.gg**.
+
+O sistema opera sob o princípio estrito:
+$$\text{OBSERVE} \longrightarrow \text{INTERPRET} \longrightarrow \text{REMEMBER} \longrightarrow \text{DECIDE} \longrightarrow \text{ACT} \longrightarrow \text{VERIFY}$$
+
+---
+
+## 🏗️ Arquitetura do Sistema
+
+```
+                    MODERN GUI (14 Páginas)
+                               │
+                               ▼
+                        BotController
+                               │
+                               ▼
+                       LumenaBotEngine (SSOT)
+                               │
+        ┌──────────────────────┼──────────────────────┐
+        ▼                      ▼                      ▼
+    Perception               Memory                 Combat
+        │                      │                      │
+        └──────────────────────┼──────────────────────┘
+                               ▼
+                          Navigation
+                               │
+                               ▼
+                         ActionExecutor
+                               │
+                               ▼
+                         InputController
+                           /          \
+                          /            \
+                TargetWindow        SafetyGuard
+                          \            /
+                           \          /
+                             Win32
+```
+
+---
+
+## 🚀 Como Iniciar
+
+### 1. Executável Compilado (Standalone)
+Execute diretamente o executável embutido:
 ```powershell
 .\dist\LumenaBot\LumenaBot.exe
 ```
 
-### Opção 2: Pelo Código Fonte (Python 3.12+)
+### 2. Ambiente de Desenvolvimento (Python 3.12+)
 ```powershell
-& "C:\Users\02555331280\AppData\Local\Programs\Python\Python312\python.exe" main.py
-```
+# Ativar ambiente virtual se necessário
+python -m pip install -r requirements.txt
 
-### Opção 3: Teste Físico Isolado em 17 Etapas
-```powershell
-& "C:\Users\02555331280\AppData\Local\Programs\Python\Python312\python.exe" scripts/real_world_test.py --interactive
+# Iniciar Control Center GUI
+python main.py
+
+# Rodar a suíte completa de 63 testes unitários
+python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
 ---
 
-## ⌨️ Atalhos Globais de Teclado
-- **F5:** Iniciar automação (*Start*)
-- **F6:** Pausar / Retomar (*Pause / Resume*)
-- **F7:** Parar automação (*Stop*)
-- **ESC:** **PARADA DE EMERGÊNCIA IMEDIATA** (*Emergency Stop — libera todas as teclas físicas*)
+## 🎮 Guia de Uso Rápido
+
+1. **Abrir o Jogo:** Abra o **Google Chrome** no [https://lumena.gg](https://lumena.gg), realize o login e coloque o personagem em uma área segura.
+2. **Target Window Wizard:** No topo da GUI, clique em **🧙 TARGET WIZARD** para detectar e calibrar a janela do jogo.
+3. **Teste de Entrada Física (Level 6):** Acesse a página **🧪 Validation Levels** e clique em **▶ RUN LEVEL 6 (FÍSICO)** para despachar a tecla `W` (0.5s) e medir o delta visual com geração de evidências.
+4. **Modo Autônomo (Level 7):** Pressione **F5** ou clique em **▶ START** para iniciar a exploração e combate contínuos.
+5. **Parada de Emergência:** Pressione a tecla **ESC** a qualquer momento para interrupção imediata e liberação atômica de todas as teclas.

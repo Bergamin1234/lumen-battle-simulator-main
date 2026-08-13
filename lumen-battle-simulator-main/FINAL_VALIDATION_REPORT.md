@@ -3,36 +3,36 @@
 ---
 
 ## 1. Resumo Executivo
-O projeto **Lumena Bot** foi auditado, validado e transformado no **Lumena Bot Control Center v3.0**, uma suíte desktop de controle e monitoramento autônomo em malha fechada (*closed-loop*). O sistema elimina discrepâncias entre código simulado e comportamento físico, integrando validação de delta visual em tempo real, guardião de segurança com parada atômica (**ESC**) e interface moderna em 13 páginas operacionais.
+O projeto **Lumena Bot** foi auditado, validado e transformado no **Lumena Bot Control Center v3.0**, uma suíte desktop profissional para automação, monitoramento e combate autônomo em malha fechada (*closed-loop*). O sistema integra verificação visual empírica de frames antes/depois, guardião de segurança com parada atômica (**ESC**), barramento de eventos assíncrono e interface gráfica em 14 páginas com assistente de configuração guiado (*Target Window Wizard*).
 
 ---
 
 ## 2. Arquitetura Encontrada (Single Source of Truth)
 - **Fluxo Oficial Unificado:**
   `GUI` ➔ `BotController` ➔ `LumenaBotEngine` ➔ `StateMachine` ➔ `ScreenCapture` ➔ `StateClassifier` ➔ `MemoryManager` ➔ `CombatAgent` / `NavigationController` ➔ `ActionExecutor` ➔ `InputController` ➔ `Win32InputBackend` / `PyAutoGUIInputBackend` ➔ `Chrome / Canvas` ➔ `Verification (Delta Visual)`.
-- **Barramento de Comunicação Assíncrono:** `EventBus` thread-safe com fila `queue.Queue` consumida a 50ms pela thread principal da GUI.
+- **Barramento de Comunicação Assíncrono:** `EventBus` thread-safe com fila `queue.Queue` consumida a cada 50ms pela thread principal da GUI.
 
 ---
 
 ## 3. Problemas Encontrados na Auditoria
-1. Falta de separação entre `FOCUS_REQUESTED` e `FOCUS_VERIFIED` em tempo real.
+1. Falta de separação formal entre `FOCUS_REQUESTED` e `FOCUS_VERIFIED`.
 2. Inexistência de pasta estruturada para gravação de pacotes de evidência granular (*before, after, diff, telemetry, state, result*).
 3. Ausência de página dedicada para acompanhamento interativo dos Níveis de Validação Técnica (1 a 7).
-4. Necessidade de limitação estrita de tentativas consecutivas na rotina anti-stuck para evitar loops infinitos.
+4. Ausência de um assistente guiado (*Wizard*) para configuração da janela alvo.
 
 ---
 
 ## 4. Problemas Corrigidos
 1. **Foco e Janela:** Implementada checagem com `GetForegroundWindow() == target_hwnd` e eventos específicos `WINDOW_FOCUS_REQUESTED` e `WINDOW_FOCUS_VERIFIED`.
-2. **Sistema de Evidências:** Criado gerador em `debug/evidence/<timestamp>/` contendo `before.png`, `after.png`, `diff.png` e `result.json`.
-3. **Página Validation Levels:** Integrada na interface com botões de execução assistida (*Run Level 6, Run Level 7, View Evidence*).
+2. **Gerador de Evidências:** Criado gerador em `debug/evidence/<timestamp>/` contendo `before.png`, `after.png`, `diff.png` e `result.json`.
+3. **Página Validation Levels & Target Window Wizard:** Integrados na interface com 14 páginas dedicadas.
 4. **Anti-Stuck com Fallback Seguro:** Limite de 3 tentativas com transição `RECOVERING` ➔ `OBSERVING` e desengate WASD controlado.
 
 ---
 
 ## 5. Tabela de Arquivos
 
-### Arquivos Modificados
+### Arquivos Modificados (9)
 - `config/settings.py`
 - `src/automation/bot_engine.py`
 - `src/automation/state_machine.py`
@@ -43,7 +43,7 @@ O projeto **Lumena Bot** foi auditado, validado e transformado no **Lumena Bot C
 - `src/ui/modern_gui.py`
 - `scripts/real_world_test.py`
 
-### Arquivos Criados
+### Arquivos Criados (17)
 - `src/core/event_bus.py`
 - `src/core/__init__.py`
 - `src/automation/bot_controller.py`
@@ -57,19 +57,21 @@ O projeto **Lumena Bot** foi auditado, validado e transformado no **Lumena Bot C
 - `tests/test_telemetry.py`
 - `tests/test_safety_guard.py`
 - `tests/test_route_manager.py`
+- `tests/test_gui_integration.py`
+- `ARCHITECTURE_AUDIT.md`
 - `UI_ARCHITECTURE.md`
 - `FRONTEND_GUIDE.md`
 - `FINAL_VALIDATION_REPORT.md`
 
 ### Arquivos Removidos
-- Nenhum. Todas as funcionalidades foram unificadas sem perda de código funcional.
+- Nenhum. Todas as rotinas foram unificadas no fluxo principal ativo sem perda de funcionalidade.
 
 ---
 
 ## 6. Testes Automatizados
 - **Comando:** `python -m unittest discover -s tests -p "test_*.py" -v`
-- **Total:** **59 testes**
-- **Resultado:** **59/59 APROVADOS (100% OK, 0 falhas, 0 erros)**
+- **Total:** **62 testes**
+- **Resultado:** **62/62 APROVADOS (100% OK, 0 falhas, 0 erros)**
 
 ---
 
@@ -85,7 +87,7 @@ O projeto **Lumena Bot** foi auditado, validado e transformado no **Lumena Bot C
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │ Nível  │ Descrição                                       │ Status Formal               │
 ├────────┼─────────────────────────────────────────────────┼─────────────────────────────┤
-│ LVL 1  │ Sintaxe, Imports, Modelos de Domínio e FSM     │ COMPROVADO (59/59 PASS)     │
+│ LVL 1  │ Sintaxe, Imports, Modelos de Domínio e FSM     │ COMPROVADO (62/62 PASS)     │
 │ LVL 2  │ InputController Híbrido, Scancodes e SafetyGuard│ COMPROVADO                  │
 │ LVL 3  │ Win32 API (AttachThreadInput, SetFocus, Click)  │ COMPROVADO                  │
 │ LVL 4  │ Foco Real no Google Chrome                      │ COMPROVADO PELA LÓGICA*     │

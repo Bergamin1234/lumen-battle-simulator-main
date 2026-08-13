@@ -18,14 +18,36 @@ class EventType(str, Enum):
     BOT_ERROR = "BOT_ERROR"
     STATE_CHANGED = "STATE_CHANGED"
 
-    # Ações & Decisões
-    ACTION_STARTED = "ACTION_STARTED"
-    ACTION_COMPLETED = "ACTION_COMPLETED"
-    ACTION_FAILED = "ACTION_FAILED"
+    # Janela e Foco
+    WINDOW_DETECTED = "WINDOW_DETECTED"
+    WINDOW_FOCUS_REQUESTED = "WINDOW_FOCUS_REQUESTED"
+    WINDOW_FOCUS_VERIFIED = "WINDOW_FOCUS_VERIFIED"
+    WINDOW_FOCUS_FAILED = "WINDOW_FOCUS_FAILED"
+    TARGET_FOUND = "TARGET_FOUND"
+    TARGET_LOST = "TARGET_LOST"
+
+    # Entrada Física & Segurança
+    INPUT_REQUESTED = "INPUT_REQUESTED"
+    INPUT_DISPATCHED = "INPUT_DISPATCHED"
+    INPUT_SENT = "INPUT_SENT"
+    INPUT_BLOCKED = "INPUT_BLOCKED"
+    INPUT_RELEASED = "INPUT_RELEASED"
+    INPUT_FEEDBACK = "INPUT_FEEDBACK"
+    SAFETY_TRIGGERED = "SAFETY_TRIGGERED"
+    EMERGENCY_STOP = "EMERGENCY_STOP"
+
+    # Movimento & Verificação
+    MOVEMENT_REQUESTED = "MOVEMENT_REQUESTED"
+    MOVEMENT_VERIFIED = "MOVEMENT_VERIFIED"
+    MOVEMENT_FAILED = "MOVEMENT_FAILED"
 
     # Percepção & Combate
     ENEMY_DETECTED = "ENEMY_DETECTED"
     BATTLE_STARTED = "BATTLE_STARTED"
+    BATTLE_ACTION_SELECTED = "BATTLE_ACTION_SELECTED"
+    BATTLE_ACTION_EXECUTED = "BATTLE_ACTION_EXECUTED"
+    BATTLE_VICTORY = "BATTLE_VICTORY"
+    BATTLE_DEFEAT = "BATTLE_DEFEAT"
     BATTLE_WON = "BATTLE_WON"
     BATTLE_LOST = "BATTLE_LOST"
 
@@ -34,20 +56,19 @@ class EventType(str, Enum):
     ROUTE_STEP_COMPLETED = "ROUTE_STEP_COMPLETED"
     ROUTE_COMPLETED = "ROUTE_COMPLETED"
 
-    # Entrada Física & Segurança
-    INPUT_REQUESTED = "INPUT_REQUESTED"
-    INPUT_SENT = "INPUT_SENT"
-    INPUT_BLOCKED = "INPUT_BLOCKED"
-    INPUT_FEEDBACK = "INPUT_FEEDBACK"
-    TARGET_FOUND = "TARGET_FOUND"
-    TARGET_LOST = "TARGET_LOST"
-    SAFETY_TRIGGERED = "SAFETY_TRIGGERED"
+    # Anti-Stuck & Recuperação
+    STUCK_SUSPECTED = "STUCK_SUSPECTED"
+    STUCK_DETECTED = "STUCK_DETECTED"
+    RECOVERY_STARTED = "RECOVERY_STARTED"
+    RECOVERY_SUCCESS = "RECOVERY_SUCCESS"
+    RECOVERY_FAILED = "RECOVERY_FAILED"
 
     # Diagnóstico & Sistema
+    DIAGNOSTIC_STARTED = "DIAGNOSTIC_STARTED"
     DIAGNOSTIC_COMPLETED = "DIAGNOSTIC_COMPLETED"
-    STUCK_DETECTED = "STUCK_DETECTED"
     NOTIFICATION_EMITTED = "NOTIFICATION_EMITTED"
     TELEMETRY_UPDATED = "TELEMETRY_UPDATED"
+    ERROR = "ERROR"
 
 
 @dataclass
@@ -77,7 +98,7 @@ class EventBus:
             return cls._instance
 
     def __init__(self) -> None:
-        if self._initialized:
+        if getattr(self, "_initialized", False):
             return
         self._lock = threading.Lock()
         self._subscribers: Dict[EventType, List[Callable[[BotEvent], None]]] = {et: [] for et in EventType}
@@ -88,8 +109,9 @@ class EventBus:
 
     def subscribe(self, event_type: EventType, callback: Callable[[BotEvent], None]) -> None:
         with self._lock:
-            if event_type in self._subscribers:
-                self._subscribers[event_type].append(callback)
+            if event_type not in self._subscribers:
+                self._subscribers[event_type] = []
+            self._subscribers[event_type].append(callback)
 
     def get_or_create_queue(self, subscriber_id: str, maxsize: int = 1000) -> queue.Queue:
         with self._lock:
@@ -143,7 +165,7 @@ class EventBus:
             if category:
                 filtered = [e for e in self._event_history if e.category == category.upper()]
                 return filtered[-max_count:]
-            return self._event_history[-max_count:]
+            return list(self._event_history[-max_count:])
 
     def clear(self) -> None:
         with self._lock:

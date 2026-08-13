@@ -341,18 +341,35 @@ class LumenaBotEngine:
                 self._handle_anti_stuck()
 
     def _handle_anti_stuck(self) -> None:
-        """Rotina inteligente de desengate e recuperação anti-stuck."""
-        self.logger.warning(f"⚠️ [ANTI-STUCK] Personagem parado por {self._consecutive_no_movement} tentativas. Tentando desengate...")
+        """Rotina inteligente de desengate e recuperação anti-stuck com limite rígido."""
+        if not hasattr(self, "_recovery_attempts"):
+            self._recovery_attempts = 0
+
+        self._recovery_attempts += 1
+        if self._recovery_attempts > 3:
+            self.logger.critical(f"🛑 [ANTI-STUCK] Limite de 3 tentativas de recuperação atingido. Acionando Safe Stop.")
+            self.fsm.transition_to(BotState.ERROR, reason="Max Anti-Stuck Recovery Attempts Exceeded")
+            self.event_bus.publish(
+                EventType.RECOVERY_FAILED,
+                data={"attempts": self._recovery_attempts},
+                category="NAVIGATION",
+                level="CRITICAL",
+                message="Falha de desengate anti-stuck: limite de 3 tentativas atingido. Entrando em Parada Segura.",
+            )
+            return
+
+        self.logger.warning(f"⚠️ [ANTI-STUCK] Personagem parado por {self._consecutive_no_movement} passos (Tentativa {self._recovery_attempts}/3). Tentando desengate...")
+        self.fsm.transition_to(BotState.RECOVERING, reason=f"Anti-Stuck Jiggle ({self._recovery_attempts}/3)")
         self.event_bus.publish(
-            EventType.STUCK_DETECTED,
-            data={"consecutive_failures": self._consecutive_no_movement},
+            EventType.STUCK_SUSPECTED,
+            data={"consecutive_failures": self._consecutive_no_movement, "attempt": self._recovery_attempts},
             category="NAVIGATION",
             level="WARNING",
-            message=f"Possível travamento detectado ({self._consecutive_no_movement} passos sem alteração). Iniciando desengate...",
+            message=f"Possível travamento detectado ({self._consecutive_no_movement} passos sem alteração). Iniciando manobra {self._recovery_attempts}/3...",
         )
         self.telemetry.update_agent_status(
             state="RECOVERING",
-            objective="Desengate Anti-Stuck",
+            objective=f"Desengate Anti-Stuck ({self._recovery_attempts}/3)",
             decision="WASD Jiggle",
             reason="Posição inalterada",
         )
@@ -360,6 +377,13 @@ class LumenaBotEngine:
         self.input_ctrl.press_key("d", duration=0.2)
         self.input_ctrl.press_key("w", duration=0.2)
         self._consecutive_no_movement = 0
+        self.event_bus.publish(
+            EventType.RECOVERY_SUCCESS,
+            data={"attempt": self._recovery_attempts},
+            category="NAVIGATION",
+            level="INFO",
+            message=f"Manobra de desengate {self._recovery_attempts}/3 executada.",
+        )
 
     def _handle_healing_cycle(self, snapshot: StateSnapshot) -> None:
         """Processa recuperação de vida e PP no ponto de cura."""
