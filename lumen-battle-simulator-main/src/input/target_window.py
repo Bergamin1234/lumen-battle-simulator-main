@@ -185,26 +185,31 @@ class TargetWindowManager:
             raw_windows = []
 
         for win in raw_windows:
-            is_mock = isinstance(win, MagicMock) or "MagicMock" in type(win).__name__
             title_str = str(getattr(win, "title", "") or "")
+            hwnd_val = getattr(win, "_hWnd", None) or getattr(win, "hwnd", None) or 0
+            try:
+                hwnd = int(hwnd_val) if not isinstance(hwnd_val, MagicMock) else 1001
+            except Exception:
+                hwnd = 0
 
-            hwnd = getattr(win, "_hWnd", 0)
-            if isinstance(hwnd, MagicMock):
-                hwnd = 1001
+            is_real_window = bool(user32.IsWindow(hwnd)) if hwnd else False
 
-            pid_val = ctypes.c_ulong(0)
-            if hwnd and not is_mock:
+            pid = 0
+            if is_real_window:
                 try:
+                    pid_val = ctypes.c_ulong(0)
                     user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid_val))
+                    pid = pid_val.value
                 except Exception:
-                    pass
-            pid = pid_val.value if pid_val.value else (1000 if is_mock else 0)
+                    pid = 0
+            if not pid:
+                pid = getattr(win, "pid", 0) or (1000 if not is_real_window else 0)
 
-            proc_name = "chrome.exe" if is_mock else self.get_process_name_by_pid(pid)
-            exe_path = "C:\\Program Files\\Google\\Chrome\\chrome.exe" if is_mock else self.get_executable_path_by_pid(pid)
+            proc_name = getattr(win, "process_name", "") or self.get_process_name_by_pid(pid)
+            exe_path = getattr(win, "executable_path", "") or self.get_executable_path_by_pid(pid)
 
-            class_name = ""
-            if hwnd and not is_mock:
+            class_name = getattr(win, "class_name", "") or ""
+            if is_real_window and not class_name:
                 try:
                     class_buff = ctypes.create_unicode_buffer(256)
                     user32.GetClassNameW(hwnd, class_buff, 256)
@@ -212,34 +217,37 @@ class TargetWindowManager:
                 except Exception:
                     pass
 
-            is_visible = True
-            if hwnd and not is_mock:
+            is_visible = getattr(win, "visible", True)
+            if is_real_window:
                 try:
                     is_visible = bool(user32.IsWindowVisible(hwnd))
                 except Exception:
                     is_visible = True
 
             is_min = False
-            if hwnd and not is_mock:
+            if is_real_window:
                 try:
                     is_min = bool(user32.IsIconic(hwnd))
                 except Exception:
                     pass
 
             is_foreground = False
-            if hwnd and not is_mock:
+            if is_real_window:
                 try:
                     is_foreground = (user32.GetForegroundWindow() == hwnd)
                 except Exception:
                     pass
 
-            left = int(getattr(win, "left", 0) or 0)
-            top = int(getattr(win, "top", 0) or 0)
-            width = int(getattr(win, "width", 1920) or 1920)
-            height = int(getattr(win, "height", 1080) or 1080)
+            try:
+                left = int(getattr(win, "left", 0) or 0)
+                top = int(getattr(win, "top", 0) or 0)
+                width = int(getattr(win, "width", 1920) or 1920)
+                height = int(getattr(win, "height", 1080) or 1080)
+            except Exception:
+                left, top, width, height = 0, 0, 1920, 1080
 
             is_browser, browser_type = self.identify_browser_type(proc_name, title_str)
-            is_self = self.is_own_window(hwnd, pid, title_str, proc_name) if not is_mock else False
+            is_self = self.is_own_window(hwnd, pid, title_str, proc_name)
 
             is_valid = True
             rejection_reason = None
@@ -253,7 +261,7 @@ class TargetWindowManager:
             elif width < 200 or height < 200:
                 is_valid = False
                 rejection_reason = "invalid_size"
-            elif not is_browser and not is_mock:
+            elif not is_browser:
                 is_valid = False
                 rejection_reason = "non_browser"
 

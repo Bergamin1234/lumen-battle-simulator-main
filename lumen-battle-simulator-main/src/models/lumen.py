@@ -170,6 +170,7 @@ class UIElement:
     bounding_box: tuple[int, int, int, int]  # (x, y, w, h)
     confidence: float = 1.0
     center: tuple[int, int] = (0, 0)
+    semantic_type: str = "UNKNOWN"
 
 
 @dataclass

@@ -271,6 +271,11 @@ class CombatVisionAnalyzer:
 
         return True, 0.0, 0.0
 
+    def analyze_slot_cooldown(self, slot_crop: np.ndarray) -> bool:
+        """Retorna True se o slot estiver em cooldown (escurecido/desativado)."""
+        is_available, _, _ = self._evaluate_cooldown_detailed(slot_crop)
+        return not is_available
+
     def _evaluate_cooldown(self, slot_crop: np.ndarray) -> Tuple[bool, float]:
         avail, cd, _ = self._evaluate_cooldown_detailed(slot_crop)
         return avail, cd

@@ -13,6 +13,7 @@ from src.input.safety_guard import SafetyGuard
 from src.core.event_bus import EventBus, EventType
 
 logger = logging.getLogger("LumenaInput")
+user32 = ctypes.windll.user32 if hasattr(ctypes, "windll") else None
 
 
 @dataclass
@@ -158,12 +159,14 @@ class InputController:
         info = self.window_manager._current_target
         hwnd = info.hwnd if info else 0
         title = info.title if info else "Nenhuma"
+        fg_hwnd = user32.GetForegroundWindow() if user32 and hasattr(user32, "GetForegroundWindow") else 0
         can_dispatch = self.safety_guard.validate_can_dispatch(
             is_window_confirmed=focused,
             target_hwnd=hwnd,
             target_pid=getattr(info, "pid", None),
             target_title=title,
             target_process=getattr(info, "process_name", None),
+            foreground_hwnd=fg_hwnd,
         )
 
         if not can_dispatch:
@@ -284,6 +287,7 @@ class InputController:
         target_pid = getattr(info, "pid", None) if info else None
         target_title = getattr(info, "title", None) if info else None
         target_process = getattr(info, "process_name", None) if info else None
+        fg_hwnd = user32.GetForegroundWindow() if user32 and hasattr(user32, "GetForegroundWindow") else 0
 
         if not self.safety_guard.validate_can_dispatch(
             is_window_confirmed=focused,
@@ -291,6 +295,7 @@ class InputController:
             target_pid=target_pid,
             target_title=target_title,
             target_process=target_process,
+            foreground_hwnd=fg_hwnd,
         ):
             return False
 
@@ -329,6 +334,7 @@ class InputController:
         target_pid = getattr(info, "pid", None) if info else None
         target_title = getattr(info, "title", None) if info else None
         target_process = getattr(info, "process_name", None) if info else None
+        fg_hwnd = user32.GetForegroundWindow() if user32 and hasattr(user32, "GetForegroundWindow") else 0
 
         if not self.safety_guard.validate_can_dispatch(
             is_window_confirmed=focused,
@@ -336,6 +342,7 @@ class InputController:
             target_pid=target_pid,
             target_title=target_title,
             target_process=target_process,
+            foreground_hwnd=fg_hwnd,
         ):
             return False
 

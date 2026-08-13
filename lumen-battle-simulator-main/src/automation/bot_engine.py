@@ -15,6 +15,9 @@ from src.perception.state_classifier import StateClassifier
 from src.memory.memory_manager import MemoryManager
 from src.combat.combat_agent import CombatAgent
 from src.combat.action_executor import ActionExecutor
+from src.combat.skill_executor import SkillExecutor
+from src.perception.combat_vision import CombatVisionAnalyzer
+from src.automation.healing import HealingController
 from src.automation.navigation import NavigationController
 from src.automation.state_machine import BotState, BotStateMachine
 from src.telemetry.telemetry_manager import TelemetryManager
@@ -51,6 +54,11 @@ class LumenaBotEngine:
             action_executor=self.action_executor,
             memory_manager=self.memory_manager,
         )
+        self.healing_controller = HealingController(
+            config=self.config,
+            input_ctrl=self.input_ctrl,
+        )
+        self.combat_vision = CombatVisionAnalyzer()
         self.navigation = NavigationController(
             config=self.config,
             input_ctrl=self.input_ctrl,
@@ -65,6 +73,27 @@ class LumenaBotEngine:
         self._max_consecutive_errors = 5
         self._last_state_snapshot: Optional[StateSnapshot] = None
         self._latest_annotated_frame = None
+
+        # Execution Health & Watchdog Tracker
+        self._last_physical_action_time = time.time()
+        self._stalled_warning_emitted = False
+        self.health_monitor: Dict[str, Any] = {
+            "perception": True,
+            "target": True,
+            "positioning": True,
+            "focus": True,
+            "input": True,
+            "action": True,
+            "verification": True,
+            "current_goal": "IDLE",
+            "current_target": "NONE",
+            "target_confidence": 0.0,
+            "last_action": "NONE",
+            "last_input": "NONE",
+            "last_verified_action": "NONE",
+            "last_block_reason": "NONE",
+            "visual_delta": 0.0,
+        }
 
         # Anti-Stuck & Recovery Tracker
         self._last_movement_time = time.time()
@@ -222,6 +251,22 @@ class LumenaBotEngine:
         # 3. MEMORY: Atualização da Memória Operacional
         self.memory_manager.update_from_snapshot(snapshot)
 
+        # Watchdog: Verifica se o bot está travado apenas observando sem ação física
+        if self._running and not self._paused:
+            if time.time() - self._last_physical_action_time > 15.0:
+                if not self._stalled_warning_emitted:
+                    self.logger.warning("🛑 [WATCHDOG] EXECUTION_STALLED: Nenhuma ação física executada nos últimos 15s!")
+                    self.event_bus.publish(
+                        EventType.EXECUTION_STALLED,
+                        data={"elapsed": time.time() - self._last_physical_action_time, "state": self.fsm.current_state.name},
+                        category="SAFETY",
+                        level="WARNING",
+                        message="EXECUTION_STALLED: Bot observando sem ação há mais de 15s.",
+                    )
+                    self.health_monitor["action"] = False
+                    self._stalled_warning_emitted = True
+                    self.input_ctrl.focus_game_window()
+
         # 4. DECIDE & ACT: Máquina de Estados e Despacho
         bt = snapshot.battle_telemetry
 
@@ -238,19 +283,27 @@ class LumenaBotEngine:
             self._handle_battle_cycle(snapshot, frame)
 
         elif snapshot.screen_state in (AgentState.BATTLE, AgentState.BATTLE_DETECTED) or (bt and bt.in_battle):
+            self.health_monitor["current_goal"] = "COMBAT"
+            self.health_monitor["current_target"] = "ENEMY"
             self.fsm.transition_to(BotState.BATTLE, reason="Interface de Batalha Ativa")
             self.event_bus.publish(EventType.BATTLE_STARTED, category="COMBAT", level="INFO", message="Combate iniciado contra inimigo")
             self._handle_battle_cycle(snapshot, frame)
 
         elif snapshot.screen_state in (AgentState.HEALING, AgentState.SEARCHING_CRYSTAL) or snapshot.crystal_detected:
+            self.health_monitor["current_goal"] = "HEAL"
+            self.health_monitor["current_target"] = "HEALING_CRYSTAL"
+            self.health_monitor["target_confidence"] = snapshot.ui_elements.get("blue_crystal").confidence if "blue_crystal" in snapshot.ui_elements else 0.85
             self.fsm.transition_to(BotState.HEALING, reason="Ponto de Cura / Cristal Ativo")
-            self._handle_healing_cycle(snapshot)
+            self._handle_healing_cycle(snapshot, frame)
 
         elif bt and bt.dialog_active:
+            self.health_monitor["current_goal"] = "ADVANCE_DIALOG"
             self.fsm.transition_to(BotState.DIALOG, reason="Caixa de Diálogo Detectada")
             self._handle_dialog_cycle(snapshot)
 
         elif snapshot.screen_state in (AgentState.EXPLORING, AgentState.SEARCHING_FARM):
+            self.health_monitor["current_goal"] = "EXPLORE"
+            self.health_monitor["current_target"] = "NONE"
             self.fsm.transition_to(BotState.EXPLORING, reason="Mundo Aberto Ativo")
             self._handle_overworld_cycle(snapshot, frame)
 
@@ -266,7 +319,7 @@ class LumenaBotEngine:
         self._consecutive_errors = 0
 
     def _handle_battle_cycle(self, snapshot: StateSnapshot, frame_before: np.ndarray) -> None:
-        """Processa turno de combate inteligente via CombatAgent com verificação fechada."""
+        """Processa turno de combate inteligente via CombatAgent com visão dinâmica e verificação fechada."""
         if self.mode == "MANUAL":
             self.telemetry.update_agent_status(
                 state="BATTLE (MANUAL)",
@@ -277,23 +330,33 @@ class LumenaBotEngine:
             return
 
         t0 = time.time()
-        turn_res = self.combat_agent.process_turn(snapshot)
+        # Analisa visão dinâmica de combate (N slots de skill, posicionamento, alvos)
+        combat_snapshot = self.combat_vision.analyze_frame(frame_before, timestamp=snapshot.timestamp)
+        turn_res = self.combat_agent.process_combat_snapshot(combat_snapshot, screen_capture_func=self.screen_capture.capture_frame)
         t1 = time.time()
+
+        if turn_res.executed_successfully:
+            self._last_physical_action_time = time.time()
+            self._stalled_warning_emitted = False
+            self.health_monitor["action"] = True
+            self.health_monitor["verification"] = True
+            self.health_monitor["last_verified_action"] = f"COMBAT_{turn_res.agent_state.name}"
 
         if turn_res.decision:
             d = turn_res.decision
+            self.health_monitor["last_action"] = getattr(d, "action_type", "ATTACK")
             self.telemetry.update_agent_status(
                 state="BATTLE",
                 objective="Lutando contra Inimigo",
-                decision=f"{d.action_type} -> {d.target_name}",
-                reason=d.reason,
+                decision=f"{getattr(d, 'action_type', 'ACTION')} -> {getattr(d, 'target_name', 'Inimigo')}",
+                reason=getattr(d, "reason", "Decisão de Combate"),
             )
             self.event_bus.publish(
                 EventType.ACTION_STARTED,
-                data={"action_type": d.action_type, "target": d.target_name, "score": d.score},
+                data={"action_type": getattr(d, "action_type", "ACTION"), "score": getattr(d, "score", 0.0)},
                 category="COMBAT",
                 level="INFO",
-                message=f"Ação de combate: {d.action_type} -> {d.target_name} ({d.reason})",
+                message=f"Ação de combate: {getattr(d, 'action_type', 'ACTION')} (Score: {getattr(d, 'score', 0.0):.1f})",
             )
 
         self.telemetry.record_action(
@@ -313,6 +376,8 @@ class LumenaBotEngine:
             )
             return
 
+        self.health_monitor["current_goal"] = "EXPLORE"
+        self.health_monitor["current_target"] = "NONE"
         self.telemetry.update_agent_status(
             state="EXPLORING",
             objective="Patrulhando Área de Farm",
@@ -325,23 +390,33 @@ class LumenaBotEngine:
         diag = self.input_ctrl.press_key_with_diagnostic(dir_key, duration=0.25)
         t1 = time.time()
 
+        if diag.success:
+            self._last_physical_action_time = time.time()
+            self._stalled_warning_emitted = False
+            self.health_monitor["action"] = True
+            self.health_monitor["last_input"] = dir_key.upper()
+
         # Observa novo frame para confirmação real
         frame_after, _ = self.screen_capture.capture_frame()
         confirmed, delta = self.input_ctrl.compute_visual_delta(frame_before, frame_after)
+        self.health_monitor["visual_delta"] = float(delta)
 
         if confirmed:
             self._last_movement_time = time.time()
             self._consecutive_no_movement = 0
+            self.health_monitor["verification"] = True
+            self.health_monitor["last_verified_action"] = "OVERWORLD_MOVE"
             self.telemetry.record_action(True, latency=t1 - t0, action_type="OVERWORLD_MOVE")
         else:
             self._consecutive_no_movement += 1
+            self.health_monitor["verification"] = False
             self.telemetry.record_action(False, latency=t1 - t0, action_type="OVERWORLD_MOVE_NO_DELTA")
             # Anti-Stuck Trigger
             if self._consecutive_no_movement >= 4:
                 self._handle_anti_stuck()
 
     def _handle_anti_stuck(self) -> None:
-        """Rotina inteligente de desengate e recuperação anti-stuck com limite rígido."""
+        """Rotina inteligente de desengate e recuperação anti-stuck com limite rígido de 3 tentativas."""
         if not hasattr(self, "_recovery_attempts"):
             self._recovery_attempts = 0
 
@@ -385,16 +460,30 @@ class LumenaBotEngine:
             message=f"Manobra de desengate {self._recovery_attempts}/3 executada.",
         )
 
-    def _handle_healing_cycle(self, snapshot: StateSnapshot) -> None:
-        """Processa recuperação de vida e PP no ponto de cura."""
+    def _handle_healing_cycle(self, snapshot: StateSnapshot, frame: Optional[np.ndarray] = None) -> None:
+        """Processa recuperação de vida e PP no ponto de cura com aproximação tática e interação em malha fechada."""
+        h_state, is_done, msg = self.healing_controller.step(snapshot, frame)
+        self.health_monitor["last_action"] = h_state
+        self.health_monitor["current_goal"] = "HEAL"
+        self.health_monitor["current_target"] = "HEALING_CRYSTAL"
+
+        if h_state in ("APPROACH_TARGET", "INTERACTING", "INTERACT_READY"):
+            self._last_physical_action_time = time.time()
+            self._stalled_warning_emitted = False
+            self.health_monitor["action"] = True
+            self.health_monitor["last_input"] = self.healing_controller.last_move_key or "SPACE"
+
         self.telemetry.update_agent_status(
-            state="HEALING",
+            state=f"HEALING ({h_state})",
             objective="Recuperando Equipe no Cristal",
-            decision="Interagir com Cristal",
-            reason="HP Baixo ou Ponto de Cura Próximo",
+            decision=msg,
+            reason=f"Cristal: {snapshot.crystal_relative_pos}px" if snapshot.crystal_relative_pos else "Buscando",
         )
-        self.input_ctrl.press_key("space", duration=0.15)
-        time.sleep(0.5)
+
+        if is_done:
+            self.health_monitor["verification"] = True
+            self.health_monitor["last_verified_action"] = "HEALING_VERIFIED"
+            self.fsm.transition_to(BotState.EXPLORING, reason="Cura concluída no Cristal")
 
     def _handle_dialog_cycle(self, snapshot: StateSnapshot) -> None:
         """Avança caixas de diálogo e mensagens na tela."""

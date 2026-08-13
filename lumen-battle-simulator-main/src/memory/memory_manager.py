@@ -21,6 +21,10 @@ class MemoryManager:
 
         self._last_battle_state_logged: Optional[bool] = None
 
+    def update_from_snapshot(self, snapshot: Optional[StateSnapshot]) -> None:
+        """Alias para ingest_snapshot para integração unificada."""
+        self.ingest_snapshot(snapshot)
+
     def ingest_snapshot(self, snapshot: Optional[StateSnapshot]) -> None:
         """
         Ingere a observação de estado produzida pela camada de percepção (Fase 2).

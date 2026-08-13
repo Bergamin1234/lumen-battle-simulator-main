@@ -654,7 +654,47 @@ class ModernLumenaGUI:
         card = tk.Frame(page, bg=THEME["bg_card"], padx=16, pady=16, highlightthickness=1, highlightbackground=THEME["border"])
         card.pack(fill="both", expand=True)
 
-        tk.Label(card, text="🩺 DIAGNOSTICS CENTER & TESTES DO SISTEMA", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(anchor="w", pady=(0, 10))
+        tk.Label(card, text="🩺 DIAGNOSTICS CENTER & REAL EXECUTION HEALTH", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(anchor="w", pady=(0, 8))
+
+        # REAL EXECUTION MONITOR PANEL
+        mon_frame = tk.Frame(card, bg=THEME["bg_dark"], padx=12, pady=10, highlightthickness=1, highlightbackground=THEME["border"])
+        mon_frame.pack(fill="x", pady=(0, 10))
+
+        tk.Label(mon_frame, text="⚡ REAL EXECUTION HEALTH MONITOR", bg=THEME["bg_dark"], fg=THEME["text_primary"], font=(THEME["font_family"], 9, "bold")).pack(anchor="w", pady=(0, 6))
+
+        grid_frame = tk.Frame(mon_frame, bg=THEME["bg_dark"])
+        grid_frame.pack(fill="x", pady=4)
+
+        self.exec_health_labels = {}
+        health_keys = ["Perception", "Target", "Positioning", "Focus", "Input", "Action", "Verification"]
+        for k in health_keys:
+            col = tk.Frame(grid_frame, bg=THEME["bg_card"], padx=8, pady=4, highlightthickness=1, highlightbackground=THEME["border"])
+            col.pack(side="left", fill="both", expand=True, padx=2)
+            tk.Label(col, text=k.upper(), bg=THEME["bg_card"], fg=THEME["text_muted"], font=(THEME["font_family"], 7, "bold")).pack()
+            lbl = tk.Label(col, text="● PASS", bg=THEME["bg_card"], fg=THEME["status_active"], font=(THEME["font_family"], 9, "bold"))
+            lbl.pack()
+            self.exec_health_labels[k.lower()] = lbl
+
+        status_grid = tk.Frame(mon_frame, bg=THEME["bg_dark"])
+        status_grid.pack(fill="x", pady=(8, 2))
+
+        self.exec_monitor_vars = {}
+        vars_def = [
+            ("CURRENT GOAL", "exec_goal", "IDLE"),
+            ("CURRENT TARGET", "exec_target", "NONE"),
+            ("CONFIDENCE", "exec_conf", "0.00"),
+            ("LAST ACTION", "exec_action", "NONE"),
+            ("LAST INPUT", "exec_input", "NONE"),
+            ("LAST VERIFIED", "exec_verified", "NONE"),
+            ("VISUAL DELTA", "exec_delta", "0.0000"),
+        ]
+        for title, key, val in vars_def:
+            box = tk.Frame(status_grid, bg=THEME["bg_card"], padx=6, pady=4)
+            box.pack(side="left", fill="both", expand=True, padx=2)
+            tk.Label(box, text=title, bg=THEME["bg_card"], fg=THEME["text_muted"], font=(THEME["font_family"], 7)).pack(anchor="w")
+            lbl = tk.Label(box, text=val, bg=THEME["bg_card"], fg="#38BDF8", font=("Consolas", 8, "bold"))
+            lbl.pack(anchor="w")
+            self.exec_monitor_vars[key] = lbl
 
         btn_bar = tk.Frame(card, bg=THEME["bg_card"])
         btn_bar.pack(fill="x", pady=(0, 10))
@@ -664,7 +704,7 @@ class ModernLumenaGUI:
         tk.Button(btn_bar, text="📸 CAPTURE TEST", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 9), bd=0, padx=10, pady=6, command=self._on_test_capture).pack(side="left", padx=4)
         tk.Button(btn_bar, text="🪟 FOCUS TEST", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 9), bd=0, padx=10, pady=6, command=self._on_test_focus).pack(side="left", padx=4)
 
-        self.diag_results_text = tk.Text(card, bg=THEME["bg_dark"], fg="#93C5FD", font=("Consolas", 9), height=14, bd=0)
+        self.diag_results_text = tk.Text(card, bg=THEME["bg_dark"], fg="#93C5FD", font=("Consolas", 9), height=10, bd=0)
         self.diag_results_text.pack(fill="both", expand=True)
 
         return page
@@ -1187,6 +1227,21 @@ class ModernLumenaGUI:
                 else:
                     self.val_level_labels["LEVEL 6"].configure(text="NOT VALIDATED (Ação Usuário)", fg=THEME["status_warning"])
                     self.val_level_labels["LEVEL 7"].configure(text="BLOQUEADO (Requer Level 6 PASS)", fg=THEME["status_warning"])
+
+            if self.current_page == "diagnostics" and hasattr(self, "exec_health_labels") and hasattr(self.bot_controller.engine, "health_monitor"):
+                hm = self.bot_controller.engine.health_monitor
+                for k, lbl in self.exec_health_labels.items():
+                    ok = hm.get(k, True)
+                    lbl.configure(text="● PASS" if ok else "● FAIL", fg=THEME["status_active"] if ok else THEME["status_error"])
+
+                if hasattr(self, "exec_monitor_vars"):
+                    self.exec_monitor_vars["exec_goal"].configure(text=hm.get("current_goal", "IDLE"))
+                    self.exec_monitor_vars["exec_target"].configure(text=hm.get("current_target", "NONE"))
+                    self.exec_monitor_vars["exec_conf"].configure(text=f"{hm.get('target_confidence', 0.0):.2f}")
+                    self.exec_monitor_vars["exec_action"].configure(text=str(hm.get("last_action", "NONE"))[:15])
+                    self.exec_monitor_vars["exec_input"].configure(text=str(hm.get("last_input", "NONE")))
+                    self.exec_monitor_vars["exec_verified"].configure(text=str(hm.get("last_verified_action", "NONE"))[:15])
+                    self.exec_monitor_vars["exec_delta"].configure(text=f"{hm.get('visual_delta', 0.0):.4f}")
 
             if self.current_page == "telemetry":
                 t_text = (

@@ -1,3 +1,4 @@
+import time
 from dataclasses import dataclass, field
 from typing import Optional, List, Tuple, Dict, Any
 from src.models.enums import Element
@@ -120,7 +121,7 @@ class PositionInfo:
 @dataclass
 class CombatSnapshot:
     """Snapshot completo e dinâmico da visão de combate."""
-    timestamp: float
+    timestamp: float = field(default_factory=time.time)
     player_hp: float = 1.0
     player_resource: float = 100.0
     player_position: Tuple[int, int] = (960, 540)
