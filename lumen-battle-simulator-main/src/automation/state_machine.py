@@ -2,6 +2,8 @@ import enum
 import logging
 from typing import List, Callable, Dict, Set, Optional
 
+from src.core.event_bus import EventBus, EventType
+
 logger = logging.getLogger("LumenaSystem")
 
 
@@ -35,6 +37,7 @@ class BotStateMachine:
         self.logger = logging.getLogger("LumenaSystem")
         self._current_state = initial_state
         self._listeners: List[Callable[[BotState, BotState], None]] = []
+        self._event_bus = EventBus()
 
         # Tabela de transições permitidas
         self._allowed_transitions: Dict[BotState, Set[BotState]] = {
@@ -74,7 +77,18 @@ class BotStateMachine:
         if new_state in (BotState.EMERGENCY_STOP, BotState.IDLE, BotState.STOPPING, BotState.ERROR) or new_state in allowed:
             old_state = self._current_state
             self._current_state = new_state
-            self.logger.info(f"🔄 [FSM] Transição: {old_state.name} ➔ {new_state.name} ({reason or 'Ciclo de Controle'})")
+            msg = f"Transição: {old_state.name} -> {new_state.name} ({reason or 'Ciclo de Controle'})"
+            self.logger.info(f"🔄 [FSM] {msg}")
+
+            # Publica no EventBus
+            self._event_bus.publish(
+                EventType.STATE_CHANGED,
+                data={"old_state": old_state.name, "new_state": new_state.name, "reason": reason},
+                category="SYSTEM",
+                level="INFO",
+                message=msg,
+            )
+
             for listener in self._listeners:
                 try:
                     listener(old_state, new_state)

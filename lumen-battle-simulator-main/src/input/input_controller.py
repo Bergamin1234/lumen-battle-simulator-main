@@ -10,6 +10,7 @@ import pyautogui
 from src.input.target_window import TargetWindowManager, WindowInfo
 from src.input.input_backend import InputBackend, Win32InputBackend, PyAutoGUIInputBackend
 from src.input.safety_guard import SafetyGuard
+from src.core.event_bus import EventBus, EventType
 
 logger = logging.getLogger("LumenaInput")
 
@@ -53,6 +54,7 @@ class InputController:
         ]
         self.window_manager = TargetWindowManager(self.target_window_titles)
         self.safety_guard = SafetyGuard()
+        self.event_bus = EventBus()
 
         self.win32_backend = Win32InputBackend()
         self.pyautogui_backend = PyAutoGUIInputBackend()
@@ -76,6 +78,13 @@ class InputController:
     def emergency_stop(self) -> None:
         """Aciona parada de emergência e libera teclas."""
         self.safety_guard.trigger_emergency_stop(self.backend)
+        self.event_bus.publish(
+            EventType.SAFETY_TRIGGERED,
+            data={"reason": "Emergency Stop Acionado"},
+            category="SAFETY",
+            level="CRITICAL",
+            message="PARADA DE EMERGÊNCIA ATIVADA — Todas as teclas liberadas",
+        )
 
     def reset_emergency(self) -> None:
         """Reseta a trava de segurança."""
@@ -90,6 +99,25 @@ class InputController:
         self._last_focus_check = now
         success = self.window_manager.bring_to_foreground()
         self._is_window_focused = success
+
+        info = self.window_manager._current_target
+        if success and info:
+            self.event_bus.publish(
+                EventType.TARGET_FOUND,
+                data={"hwnd": info.hwnd, "title": info.title},
+                category="WINDOW",
+                level="INFO",
+                message=f"Janela alvo focada: '{info.title}' (HWND: {info.hwnd})",
+            )
+        elif not success:
+            self.event_bus.publish(
+                EventType.TARGET_LOST,
+                data={"hwnd": info.hwnd if info else 0},
+                category="WINDOW",
+                level="WARNING",
+                message="Janela alvo não confirmada em primeiro plano",
+            )
+
         return success
 
     def is_target_focused(self) -> bool:
@@ -118,19 +146,28 @@ class InputController:
         """Pressiona tecla com rastreamento formal dos estados de entrada."""
         k = key.lower().strip()
         self.logger.info(f"⚡ [INPUT] INPUT_REQUESTED: key='{k.upper()}', duration={duration:.2f}s")
+        self.event_bus.publish(
+            EventType.INPUT_REQUESTED,
+            data={"key": k, "duration": duration},
+            category="INPUT",
+            level="DEBUG",
+            message=f"Input solicitado: {k.upper()} ({duration:.2f}s)",
+        )
 
         focused = self.focus_game_window()
         info = self.window_manager._current_target
         hwnd = info.hwnd if info else 0
         title = info.title if info else "Nenhuma"
 
-        if focused:
-            self.logger.info(f"🪟 [WINDOW] INPUT_WINDOW_FOCUSED: HWND={hwnd} ('{title}')")
-        else:
-            self.logger.warning(f"⚠️ [WINDOW] TARGET WINDOW NOT FOCUSED / LOST: HWND={hwnd}")
-
         if not self.safety_guard.validate_can_dispatch(focused):
             self.logger.warning(f"🛑 [SAFETY] INPUT_BLOCKED: Janela não confirmada ou parada de emergência ativa.")
+            self.event_bus.publish(
+                EventType.INPUT_BLOCKED,
+                data={"key": k, "reason": "Janela não confirmada ou Parada de Emergência"},
+                category="SAFETY",
+                level="WARNING",
+                message=f"Input bloqueado por segurança: {k.upper()}",
+            )
             return KeyDiagnosticResult(
                 key=k,
                 vk_code=0,
@@ -163,6 +200,13 @@ class InputController:
             self.win32_backend.key_down(k, hwnd, child_hwnds)
             self.pyautogui_backend.key_down(k)
             self.logger.info(f"🎮 [INPUT] INPUT_DISPATCHED: Win32 SendInput (VK=0x{vk:02X}, Scan=0x{scancode:02X}) [KEY_DOWN]")
+            self.event_bus.publish(
+                EventType.INPUT_SENT,
+                data={"key": k, "vk": vk, "scancode": scancode, "duration": actual_duration},
+                category="INPUT",
+                level="INFO",
+                message=f"Tecla {k.upper()} despachada ({actual_duration:.2f}s)",
+            )
 
             time.sleep(actual_duration)
 
@@ -175,10 +219,13 @@ class InputController:
             # Validação de Feedback Visual
             confirmed, delta = self.compute_visual_delta(frame_before, frame_after)
             if frame_before is not None and frame_after is not None:
-                if confirmed:
-                    self.logger.info(f"📊 [PERCEPTION] INPUT_VISUAL_FEEDBACK: delta={delta:.4f} ➔ INPUT_CONFIRMED")
-                else:
-                    self.logger.warning(f"⚠️ [PERCEPTION] INPUT_VISUAL_FEEDBACK: delta={delta:.4f} ➔ INPUT_FEEDBACK_NOT_CONFIRMED")
+                self.event_bus.publish(
+                    EventType.INPUT_FEEDBACK,
+                    data={"key": k, "delta": delta, "confirmed": confirmed},
+                    category="PERCEPTION",
+                    level="INFO" if confirmed else "WARNING",
+                    message=f"Feedback visual tecla {k.upper()}: delta={delta:.4f} ({'CONFIRMADO' if confirmed else 'SEM ALTERAÇÃO'})",
+                )
 
             return KeyDiagnosticResult(
                 key=k,

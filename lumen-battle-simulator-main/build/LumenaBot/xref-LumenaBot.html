@@ -206,6 +206,7 @@ imports:
  &#8226;   <a href="#src.core.battle">src.core.battle</a>
  &#8226;   <a href="#src.core.codex">src.core.codex</a>
  &#8226;   <a href="#src.core.elements">src.core.elements</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
  &#8226;   <a href="#src.core.formulas">src.core.formulas</a>
  &#8226;   <a href="#src.database">src.database</a>
  &#8226;   <a href="#src.database.connection">src.database.connection</a>
@@ -6551,6 +6552,7 @@ imported by:
  &#8226;   <a href="#src.combat.combat_agent">src.combat.combat_agent</a>
  &#8226;   <a href="#src.combat.decision_engine">src.combat.decision_engine</a>
  &#8226;   <a href="#src.core.battle">src.core.battle</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
  &#8226;   <a href="#src.input.input_controller">src.input.input_controller</a>
  &#8226;   <a href="#src.input.target_window">src.input.target_window</a>
  &#8226;   <a href="#src.models.lumen">src.models.lumen</a>
@@ -9720,6 +9722,7 @@ imported by:
  &#8226;   <a href="#socket">socket</a>
  &#8226;   <a href="#src.automation.state_machine">src.automation.state_machine</a>
  &#8226;   <a href="#src.combat.combat_agent">src.combat.combat_agent</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
  &#8226;   <a href="#src.models.enums">src.models.enums</a>
  &#8226;   <a href="#ssl">ssl</a>
  &#8226;   <a href="#tkinter">tkinter</a>
@@ -11333,6 +11336,7 @@ imported by:
  &#8226;   <a href="#src.combat.combat_agent">src.combat.combat_agent</a>
  &#8226;   <a href="#src.combat.decision_engine">src.combat.decision_engine</a>
  &#8226;   <a href="#src.core.battle">src.core.battle</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
  &#8226;   <a href="#src.input.input_backend">src.input.input_backend</a>
  &#8226;   <a href="#src.input.input_controller">src.input.input_controller</a>
  &#8226;   <a href="#src.input.safety_guard">src.input.safety_guard</a>
@@ -20471,6 +20475,8 @@ imported by:
  &#8226;   <a href="#multiprocessing.managers">multiprocessing.managers</a>
  &#8226;   <a href="#multiprocessing.pool">multiprocessing.pool</a>
  &#8226;   <a href="#multiprocessing.queues">multiprocessing.queues</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
+ &#8226;   <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
 
   </div>
 
@@ -21504,6 +21510,7 @@ imports:
  &#8226;   <a href="#src.automation.state_machine">src.automation.state_machine</a>
  &#8226;   <a href="#src.combat.action_executor">src.combat.action_executor</a>
  &#8226;   <a href="#src.combat.combat_agent">src.combat.combat_agent</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
  &#8226;   <a href="#src.input.input_controller">src.input.input_controller</a>
  &#8226;   <a href="#src.memory.memory_manager">src.memory.memory_manager</a>
  &#8226;   <a href="#src.models">src.models</a>
@@ -21622,6 +21629,7 @@ imports:
     <a href="#enum">enum</a>
  &#8226;   <a href="#logging">logging</a>
  &#8226;   <a href="#src.automation">src.automation</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
  &#8226;   <a href="#typing">typing</a>
 
   </div>
@@ -21767,8 +21775,7 @@ imported by:
 <span class="moduletype">Package</span>  <div class="import">
 imports:
     <a href="#src">src</a>
- &#8226;   <a href="#src.core.battle">src.core.battle</a>
- &#8226;   <a href="#src.core.elements">src.core.elements</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
 
   </div>
   <div class="import">
@@ -21777,6 +21784,7 @@ imported by:
  &#8226;   <a href="#src.core.battle">src.core.battle</a>
  &#8226;   <a href="#src.core.codex">src.core.codex</a>
  &#8226;   <a href="#src.core.elements">src.core.elements</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
  &#8226;   <a href="#src.core.formulas">src.core.formulas</a>
 
   </div>
@@ -21801,7 +21809,6 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
- &#8226;   <a href="#src.core">src.core</a>
  &#8226;   <a href="#src.services.simulation">src.services.simulation</a>
 
   </div>
@@ -21842,8 +21849,35 @@ imports:
 imported by:
     <a href="#main.py">main.py</a>
  &#8226;   <a href="#src.combat.decision_engine">src.combat.decision_engine</a>
- &#8226;   <a href="#src.core">src.core</a>
  &#8226;   <a href="#src.core.battle">src.core.battle</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="src.core.event_bus"></a>
+  <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/src/core/event_bus.py" type="text/plain"><tt>src.core.event_bus</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#dataclasses">dataclasses</a>
+ &#8226;   <a href="#enum">enum</a>
+ &#8226;   <a href="#logging">logging</a>
+ &#8226;   <a href="#queue">queue</a>
+ &#8226;   <a href="#src.core">src.core</a>
+ &#8226;   <a href="#threading">threading</a>
+ &#8226;   <a href="#time">time</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+ &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
+ &#8226;   <a href="#src.automation.state_machine">src.automation.state_machine</a>
+ &#8226;   <a href="#src.core">src.core</a>
+ &#8226;   <a href="#src.input.input_controller">src.input.input_controller</a>
+ &#8226;   <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
 
   </div>
 
@@ -22007,6 +22041,7 @@ imports:
  &#8226;   <a href="#numpy">numpy</a>
  &#8226;   <a href="#pyautogui">pyautogui</a>
  &#8226;   <a href="#random">random</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
  &#8226;   <a href="#src.input">src.input</a>
  &#8226;   <a href="#src.input.input_backend">src.input.input_backend</a>
  &#8226;   <a href="#src.input.safety_guard">src.input.safety_guard</a>
@@ -22823,9 +22858,11 @@ imports:
  &#8226;   <a href="#logging">logging</a>
  &#8226;   <a href="#numpy">numpy</a>
  &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#queue">queue</a>
  &#8226;   <a href="#scripts.real_world_test">scripts.real_world_test</a>
  &#8226;   <a href="#src.automation.bot_controller">src.automation.bot_controller</a>
  &#8226;   <a href="#src.automation.state_machine">src.automation.state_machine</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
  &#8226;   <a href="#src.input.input_controller">src.input.input_controller</a>
  &#8226;   <a href="#src.input.target_window">src.input.target_window</a>
  &#8226;   <a href="#src.telemetry.telemetry_manager">src.telemetry.telemetry_manager</a>
@@ -23536,6 +23573,7 @@ imported by:
  &#8226;   <a href="#socketserver">socketserver</a>
  &#8226;   <a href="#src.automation.bot_controller">src.automation.bot_controller</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
  &#8226;   <a href="#src.perception.screen_capture">src.perception.screen_capture</a>
  &#8226;   <a href="#src.telemetry.telemetry_manager">src.telemetry.telemetry_manager</a>
  &#8226;   <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
@@ -23611,6 +23649,7 @@ imported by:
  &#8226;   <a href="#src.automation.vision">src.automation.vision</a>
  &#8226;   <a href="#src.combat.action_executor">src.combat.action_executor</a>
  &#8226;   <a href="#src.combat.combat_agent">src.combat.combat_agent</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
  &#8226;   <a href="#src.input.input_backend">src.input.input_backend</a>
  &#8226;   <a href="#src.input.input_controller">src.input.input_controller</a>
  &#8226;   <a href="#src.input.safety_guard">src.input.safety_guard</a>
@@ -24152,6 +24191,7 @@ imported by:
  &#8226;   <a href="#src.combat.combat_agent">src.combat.combat_agent</a>
  &#8226;   <a href="#src.combat.decision_engine">src.combat.decision_engine</a>
  &#8226;   <a href="#src.core.codex">src.core.codex</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
  &#8226;   <a href="#src.input.input_backend">src.input.input_backend</a>
  &#8226;   <a href="#src.input.input_controller">src.input.input_controller</a>
  &#8226;   <a href="#src.input.safety_guard">src.input.safety_guard</a>

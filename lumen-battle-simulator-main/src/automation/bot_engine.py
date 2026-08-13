@@ -18,6 +18,7 @@ from src.combat.action_executor import ActionExecutor
 from src.automation.navigation import NavigationController
 from src.automation.state_machine import BotState, BotStateMachine
 from src.telemetry.telemetry_manager import TelemetryManager
+from src.core.event_bus import EventBus, EventType
 
 logger = logging.getLogger("LumenaMacro")
 
@@ -32,6 +33,7 @@ class LumenaBotEngine:
             monitor_cfg=MonitorConfig(),
             battle_cfg=BattleConfig(),
         )
+        self.event_bus = EventBus()
         self.fsm = BotStateMachine(initial_state=BotState.IDLE)
         self.telemetry = TelemetryManager()
 
@@ -98,6 +100,14 @@ class LumenaBotEngine:
         self._consecutive_errors = 0
         self._consecutive_no_movement = 0
 
+        self.event_bus.publish(
+            EventType.BOT_STARTED,
+            data={"mode": self.mode},
+            category="SYSTEM",
+            level="INFO",
+            message=f"LumenaBotEngine iniciado em modo {self.mode}",
+        )
+
         self.fsm.transition_to(BotState.STARTING, reason="Iniciando BotEngine")
         self.telemetry.update_agent_status(state="STARTING", objective="Validando Ambiente e Janela")
 
@@ -127,6 +137,13 @@ class LumenaBotEngine:
         self.input_ctrl.release_all_keys()
         self.fsm.transition_to(BotState.IDLE, reason="Motor Parado")
         self.telemetry.update_agent_status(state="IDLE", objective="Parado", decision="Nenhuma", reason="Bot Desativado")
+
+        self.event_bus.publish(
+            EventType.BOT_STOPPED,
+            category="SYSTEM",
+            level="INFO",
+            message="LumenaBotEngine parado com sucesso",
+        )
         self.logger.info("✓ LumenaBotEngine parado com segurança.")
 
     def emergency_stop(self) -> None:
@@ -143,10 +160,17 @@ class LumenaBotEngine:
             reason="Intervenção do Usuário (ESC)",
             error="EMERGENCY STOP ACIONADO",
         )
+        self.event_bus.publish(
+            EventType.SAFETY_TRIGGERED,
+            category="SAFETY",
+            level="CRITICAL",
+            message="EMERGENCY STOP ACIONADO (ESC / Botão Vermelho)",
+        )
 
     def pause(self) -> None:
         self._paused = True
         self.logger.info("⏸️ LumenaBotEngine pausado.")
+        self.event_bus.publish(EventType.BOT_PAUSED, category="SYSTEM", level="INFO", message="LumenaBotEngine pausado")
 
     def resume(self) -> None:
         self._paused = False
@@ -154,6 +178,7 @@ class LumenaBotEngine:
         if self.fsm.current_state == BotState.EMERGENCY_STOP:
             self.fsm.transition_to(BotState.OBSERVING, reason="Retomada após emergência")
         self.logger.info("▶️ LumenaBotEngine retomado.")
+        self.event_bus.publish(EventType.BOT_RESUMED, category="SYSTEM", level="INFO", message="LumenaBotEngine retomado")
 
     def run_loop(self) -> None:
         """Loop principal em malha fechada executado na thread do agente."""
@@ -203,15 +228,18 @@ class LumenaBotEngine:
         if bt and bt.victory_detected:
             self.fsm.transition_to(BotState.VICTORY, reason="Tela de Vitória Detectada")
             self.telemetry.record_battle_result(is_victory=True)
+            self.event_bus.publish(EventType.BATTLE_WON, category="COMBAT", level="INFO", message="Batalha vencida!")
             self._handle_battle_cycle(snapshot, frame)
 
         elif bt and bt.defeat_detected:
             self.fsm.transition_to(BotState.DEFEAT, reason="Tela de Derrota Detectada")
             self.telemetry.record_battle_result(is_victory=False)
+            self.event_bus.publish(EventType.BATTLE_LOST, category="COMBAT", level="WARNING", message="Batalha perdida ou Lumen desmaiou")
             self._handle_battle_cycle(snapshot, frame)
 
         elif snapshot.screen_state in (AgentState.BATTLE, AgentState.BATTLE_DETECTED) or (bt and bt.in_battle):
             self.fsm.transition_to(BotState.BATTLE, reason="Interface de Batalha Ativa")
+            self.event_bus.publish(EventType.BATTLE_STARTED, category="COMBAT", level="INFO", message="Combate iniciado contra inimigo")
             self._handle_battle_cycle(snapshot, frame)
 
         elif snapshot.screen_state in (AgentState.HEALING, AgentState.SEARCHING_CRYSTAL) or snapshot.crystal_detected:
@@ -259,6 +287,13 @@ class LumenaBotEngine:
                 objective="Lutando contra Inimigo",
                 decision=f"{d.action_type} -> {d.target_name}",
                 reason=d.reason,
+            )
+            self.event_bus.publish(
+                EventType.ACTION_STARTED,
+                data={"action_type": d.action_type, "target": d.target_name, "score": d.score},
+                category="COMBAT",
+                level="INFO",
+                message=f"Ação de combate: {d.action_type} -> {d.target_name} ({d.reason})",
             )
 
         self.telemetry.record_action(
@@ -308,6 +343,13 @@ class LumenaBotEngine:
     def _handle_anti_stuck(self) -> None:
         """Rotina inteligente de desengate e recuperação anti-stuck."""
         self.logger.warning(f"⚠️ [ANTI-STUCK] Personagem parado por {self._consecutive_no_movement} tentativas. Tentando desengate...")
+        self.event_bus.publish(
+            EventType.STUCK_DETECTED,
+            data={"consecutive_failures": self._consecutive_no_movement},
+            category="NAVIGATION",
+            level="WARNING",
+            message=f"Possível travamento detectado ({self._consecutive_no_movement} passos sem alteração). Iniciando desengate...",
+        )
         self.telemetry.update_agent_status(
             state="RECOVERING",
             objective="Desengate Anti-Stuck",
@@ -345,6 +387,13 @@ class LumenaBotEngine:
         self._consecutive_errors += 1
         self.telemetry.record_recovery()
         self.telemetry.update_agent_status(error=f"Erro ({self._consecutive_errors}/{self._max_consecutive_errors}): {error_msg}")
+        self.event_bus.publish(
+            EventType.BOT_ERROR,
+            data={"error": error_msg, "count": self._consecutive_errors},
+            category="ERROR",
+            level="ERROR",
+            message=f"Erro no ciclo do agente: {error_msg}",
+        )
 
         self._save_comprehensive_debug(f"cycle_error_{int(time.time())}", error_msg)
 
