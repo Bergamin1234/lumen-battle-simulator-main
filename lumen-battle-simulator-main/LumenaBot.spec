@@ -1,16 +1,35 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_data_files
+import os
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 datas = []
 datas += collect_data_files('cv2')
+datas += collect_data_files('PIL')
 
+# Inclui diretórios essenciais se existirem
+if os.path.exists('templates'):
+    datas.append(('templates', 'templates'))
+if os.path.exists('config'):
+    datas.append(('config', 'config'))
+
+hiddenimports = [
+    'pygetwindow',
+    'pyautogui',
+    'sqlite3',
+    'ctypes',
+    'tkinter',
+    'PIL',
+    'cv2',
+    'numpy',
+]
+hiddenimports += collect_submodules('src')
 
 a = Analysis(
     ['main.py'],
-    pathex=[],
+    pathex=['.'],
     binaries=[],
     datas=datas,
-    hiddenimports=['pygetwindow', 'pyautogui'],
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

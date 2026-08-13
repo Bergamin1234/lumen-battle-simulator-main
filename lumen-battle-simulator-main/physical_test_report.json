@@ -1,0 +1,38 @@
+{
+  "timestamp": "2026-08-13 08:34:46",
+  "step_1_python": true,
+  "step_2_dependencies": true,
+  "step_3_window_enumeration": true,
+  "step_4_chrome_found": false,
+  "step_5_lumena_identified": false,
+  "step_6_hwnd": 0,
+  "step_7_window_restored": false,
+  "step_8_foreground_requested": false,
+  "step_9_foreground_confirmed": false,
+  "step_10_client_area": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "step_11_canvas_region": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "step_12_screenshot_before": null,
+  "step_13_canvas_clicked": false,
+  "step_14_w_dispatched_and_released": false,
+  "step_15_screenshot_after": null,
+  "step_16_visual_delta": 0.0,
+  "step_16_altered_region": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "step_17_movement_confirmed": false,
+  "status": "NOT VALIDATED (Navegador Fechado)",
+  "summary": "Navegador com o jogo nao esta aberto. Teste nao executado para evitar injecao incorreta."
+}
