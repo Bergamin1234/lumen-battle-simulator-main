@@ -273,19 +273,23 @@ class TestLumenaBotV31Comprehensive(unittest.TestCase):
     # -------------------------------------------------------------
     def test_level_7_gate_blocked_without_level_6(self) -> None:
         controller = BotController()
-        controller.set_level_6_validated_override(False)
 
-        # Se Level 6 não foi validado, modo AUTONOMOUS deve ser bloqueado
+        # 1. Se Level 6 não foi validado, modo AUTONOMOUS deve ser estritamente bloqueado
         if os.path.exists("physical_test_report.json"):
             os.remove("physical_test_report.json")
 
-        started, msg = controller.start(mode="AUTONOMOUS", bypass_gate=False)
+        started, msg = controller.start(mode="AUTONOMOUS")
         self.assertFalse(started)
         self.assertIn("LEVEL 7 BLOCKED", msg)
 
-        # Com bypass ou override, deve permitir
-        controller.set_level_6_validated_override(True)
+        # 2. Quando physical_test_report.json com PASS é fornecido, validação é reconhecida
+        with open("physical_test_report.json", "w", encoding="utf-8") as f:
+            json.dump({"step_17_movement_confirmed": True, "status": "PASS (Movimento Físico Confirmado)"}, f)
+
         self.assertTrue(controller.is_level_6_validated())
+        # Limpa arquivo temporário
+        if os.path.exists("physical_test_report.json"):
+            os.remove("physical_test_report.json")
 
 
 if __name__ == "__main__":

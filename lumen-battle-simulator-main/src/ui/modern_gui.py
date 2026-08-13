@@ -443,7 +443,11 @@ class ModernLumenaGUI:
         skills_box = tk.Frame(card, bg=THEME["bg_card"], pady=4)
         skills_box.pack(fill="both", expand=True)
 
-        tk.Label(skills_box, text="⚡ DYNAMIC DETECTED SKILL SLOTS (N SLOTS):", bg=THEME["bg_card"], fg=THEME["text_secondary"], font=(THEME["font_family"], 9, "bold")).pack(anchor="w", pady=(0, 4))
+        sk_header_row = tk.Frame(skills_box, bg=THEME["bg_card"])
+        sk_header_row.pack(fill="x", pady=(0, 4))
+
+        tk.Label(sk_header_row, text="⚡ DYNAMIC DETECTED SKILL SLOTS (N SLOTS):", bg=THEME["bg_card"], fg=THEME["text_secondary"], font=(THEME["font_family"], 9, "bold")).pack(side="left")
+        tk.Button(sk_header_row, text="🔍 DEBUG SKILL SCANNER", bg=THEME["accent_purple"], fg="white", font=(THEME["font_family"], 8, "bold"), bd=0, padx=8, pady=2, command=self._on_debug_skill_scanner).pack(side="right")
 
         self.battle_skills_text = tk.Text(skills_box, bg=THEME["bg_dark"], fg="#6EE7B7", font=("Consolas", 9), height=7, bd=0)
         self.battle_skills_text.pack(fill="both", expand=True)
@@ -461,24 +465,51 @@ class ModernLumenaGUI:
 
         return page
 
-    def _refresh_battle_skills_display(self) -> None:
+    def _refresh_battle_skills_display(self, custom_skills=None) -> None:
         self.battle_skills_text.delete("1.0", tk.END)
         header = f"{'SLOT':<6} | {'NOME':<14} | {'STATUS':<12} | {'TIPO':<10} | {'PODER':<6} | {'COORDS':<14} | {'HOTKEY'}\n"
         sep = "-" * 80 + "\n"
         self.battle_skills_text.insert(tk.END, header + sep)
 
+        if custom_skills:
+            for s in custom_skills:
+                idx = f"Slot {s.get('index', '?')}"
+                name = s.get('skill_name') or f"Skill #{s.get('index')}"
+                stat = "READY" if s.get('available') else f"CD {s.get('cooldown', 0):.1f}s"
+                rtype = s.get('range_type', 'MELEE')
+                pwr = str(s.get('power', 40))
+                pos = s.get('position', {})
+                coords = f"({pos.get('center_x', 0)}, {pos.get('center_y', 0)})"
+                hk = str(s.get('hotkey', '?'))
+                line = f"{idx:<6} | {name:<14} | {stat:<12} | {rtype:<10} | {pwr:<6} | {coords:<14} | {hk}\n"
+                self.battle_skills_text.insert(tk.END, line)
+            return
+
         skills = [
-            ("Slot 1", "WaterPulse", "AVAILABLE", "ÁGUA", "60", "(540, 840)", "1"),
-            ("Slot 2", "FlameBurst", "COOLDOWN", "FOGO", "75", "(620, 840)", "2"),
-            ("Slot 3", "LeafBlade", "AVAILABLE", "PLANTA", "55", "(700, 840)", "3"),
-            ("Slot 4", "ThunderShock", "AVAILABLE", "ELÉTRICO", "50", "(780, 840)", "4"),
-            ("Slot 5", "Tackle", "AVAILABLE", "NORMAL", "40", "(860, 840)", "5"),
-            ("Slot 6", "QuickAttack", "AVAILABLE", "NORMAL", "35", "(940, 840)", "6"),
+            ("Slot 1", "WaterPulse", "READY", "RANGED", "60", "(556, 874)", "1"),
+            ("Slot 2", "FlameBurst", "READY", "RANGED", "75", "(754, 874)", "2"),
+            ("Slot 3", "LeafBlade", "READY", "MELEE", "55", "(952, 874)", "3"),
+            ("Slot 4", "ThunderShock", "READY", "RANGED", "50", "(1150, 874)", "4"),
+            ("Slot 5", "Tackle", "READY", "MELEE", "40", "(1348, 874)", "5"),
+            ("Slot 6", "QuickAttack", "READY", "MELEE", "35", "(1546, 874)", "6"),
         ]
 
         for s in skills:
             line = f"{s[0]:<6} | {s[1]:<14} | {s[2]:<12} | {s[3]:<10} | {s[4]:<6} | {s[5]:<14} | {s[6]}\n"
             self.battle_skills_text.insert(tk.END, line)
+
+    def _on_debug_skill_scanner(self) -> None:
+        try:
+            from src.perception.debug_skill_scanner import run_debug_skill_scan
+            res = run_debug_skill_scan()
+            skills_data = res.get("skills", {}).get("skills", [])
+            self._refresh_battle_skills_display(custom_skills=skills_data)
+            messagebox.showinfo(
+                "Skill Scanner",
+                f"✓ {res['detected_slots']} slots de habilidades detectados visualmente!\n\nEvidências salvas em:\n{res['output_dir']}"
+            )
+        except Exception as e:
+            messagebox.showerror("Erro no Scanner", f"Falha ao executar Skill Scanner: {e}")
 
     # -------------------------------------------------------------
     # 5. PÁGINA: NAVIGATION

@@ -35,33 +35,43 @@ class BotController:
         self._level_6_override: bool = False
         self._initialized = True
 
-    def set_level_6_validated_override(self, validated: bool = True) -> None:
-        """Permite habilitar manualmente a validação do Level 6 na sessão ativa."""
-        self._level_6_override = validated
-
     def is_level_6_validated(self) -> bool:
         """Verifica se o Level 6 foi formalmente comprovado via teste físico ou evidência."""
-        if self._level_6_override:
-            return True
+        # 1. Verifica physical_test_report.json
         if os.path.exists("physical_test_report.json"):
             try:
                 with open("physical_test_report.json", "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    if data.get("step_17_movement_confirmed") or "PASS" in str(data.get("status", "")).upper():
+                    if data.get("step_17_movement_confirmed") and "PASS" in str(data.get("status", "")).upper():
                         return True
             except Exception:
                 pass
+
+        # 2. Verifica pacotes de evidência em debug/evidence/
+        evidence_base = os.path.join("debug", "evidence")
+        if os.path.exists(evidence_base):
+            try:
+                for entry in sorted(os.listdir(evidence_base), reverse=True):
+                    res_file = os.path.join(evidence_base, entry, "result.json")
+                    if os.path.exists(res_file):
+                        with open(res_file, "r", encoding="utf-8") as rf:
+                            res_data = json.load(rf)
+                            if res_data.get("physically_validated") and res_data.get("success"):
+                                return True
+            except Exception:
+                pass
+
         return False
 
-    def start(self, mode: str = "AUTONOMOUS", bypass_gate: bool = False) -> Tuple[bool, str]:
-        """Inicia o motor autônomo em uma thread dedicada de background, aplicando o gate do Level 7."""
+    def start(self, mode: str = "AUTONOMOUS") -> Tuple[bool, str]:
+        """Inicia o motor autônomo em uma thread dedicada de background, aplicando o gate estrito do Level 7."""
         if self.engine.is_running:
             self.logger.warning("BotController: O bot já está em execução.")
             return True, "Bot já em execução."
 
         mode_upper = mode.upper()
-        # Portão do Level 7: Modo AUTONOMOUS exige Level 6 validado
-        if mode_upper == "AUTONOMOUS" and not bypass_gate and not self.is_level_6_validated():
+        # Portão do Level 7: Modo AUTONOMOUS exige Level 6 validado fisicamente
+        if mode_upper == "AUTONOMOUS" and not self.is_level_6_validated():
             msg = "LEVEL 7 BLOCKED: Physical input validation (Level 6) required."
             self.logger.warning(f"🛑 [GATE] {msg}")
             self.event_bus.publish(
