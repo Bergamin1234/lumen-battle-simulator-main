@@ -23,6 +23,13 @@ class EventType(str, Enum):
     WINDOW_FOCUS_REQUESTED = "WINDOW_FOCUS_REQUESTED"
     WINDOW_FOCUS_VERIFIED = "WINDOW_FOCUS_VERIFIED"
     WINDOW_FOCUS_FAILED = "WINDOW_FOCUS_FAILED"
+    TARGET_WINDOW_DISCOVERY_STARTED = "TARGET_WINDOW_DISCOVERY_STARTED"
+    TARGET_WINDOW_DISCOVERY_COMPLETED = "TARGET_WINDOW_DISCOVERY_COMPLETED"
+    TARGET_WINDOW_SELECTED = "TARGET_WINDOW_SELECTED"
+    TARGET_WINDOW_REJECTED = "TARGET_WINDOW_REJECTED"
+    CANVAS_FOCUS_REQUESTED = "CANVAS_FOCUS_REQUESTED"
+    CANVAS_FOCUS_VERIFIED = "CANVAS_FOCUS_VERIFIED"
+    CANVAS_FOCUS_FAILED = "CANVAS_FOCUS_FAILED"
     TARGET_FOUND = "TARGET_FOUND"
     TARGET_LOST = "TARGET_LOST"
 
@@ -40,12 +47,15 @@ class EventType(str, Enum):
     MOVEMENT_REQUESTED = "MOVEMENT_REQUESTED"
     MOVEMENT_VERIFIED = "MOVEMENT_VERIFIED"
     MOVEMENT_FAILED = "MOVEMENT_FAILED"
+    POSITIONING_STARTED = "POSITIONING_STARTED"
+    POSITIONING_COMPLETED = "POSITIONING_COMPLETED"
 
     # Percepção & Combate
     ENEMY_DETECTED = "ENEMY_DETECTED"
     BATTLE_STARTED = "BATTLE_STARTED"
     BATTLE_ACTION_SELECTED = "BATTLE_ACTION_SELECTED"
     BATTLE_ACTION_EXECUTED = "BATTLE_ACTION_EXECUTED"
+    ACTION_UNCONFIRMED = "ACTION_UNCONFIRMED"
     BATTLE_VICTORY = "BATTLE_VICTORY"
     BATTLE_DEFEAT = "BATTLE_DEFEAT"
     BATTLE_WON = "BATTLE_WON"
@@ -112,6 +122,11 @@ class EventBus:
             if event_type not in self._subscribers:
                 self._subscribers[event_type] = []
             self._subscribers[event_type].append(callback)
+
+    def clear_history(self) -> None:
+        """Limpa o histórico de eventos armazenados."""
+        with self._lock:
+            self._event_history.clear()
 
     def get_or_create_queue(self, subscriber_id: str, maxsize: int = 1000) -> queue.Queue:
         with self._lock:

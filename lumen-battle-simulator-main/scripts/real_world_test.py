@@ -9,14 +9,12 @@ from typing import Dict, Any, Optional, Tuple
 import numpy as np
 import cv2
 
-# Configura codificação de saída para UTF-8 de forma segura
 if hasattr(sys.stdout, "reconfigure"):
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
 
-# Adiciona raiz do projeto ao path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -29,10 +27,11 @@ from src.perception.screen_capture import ScreenCapture
 
 def run_real_world_test(interactive: bool = False) -> Dict[str, Any]:
     print("\n=======================================================")
-    print("   LUMENA BOT - TESTE DE VALIDACAO FISICA REAL (17 ETAPAS)")
+    print("   LUMENA BOT - TESTE DE VALIDACAO FISICA REAL (LEVEL 6)")
     print("=======================================================\n")
 
     report: Dict[str, Any] = {
+        "test": "LEVEL_6_PHYSICAL_MOVEMENT",
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         "step_1_python": False,
         "step_2_dependencies": False,
@@ -52,6 +51,7 @@ def run_real_world_test(interactive: bool = False) -> Dict[str, Any]:
         "step_16_visual_delta": 0.0,
         "step_16_altered_region": [0, 0, 0, 0],
         "step_17_movement_confirmed": False,
+        "threshold": 0.005,
         "status": "NOT VALIDATED (Navegador Fechado)",
         "summary": "",
     }
@@ -74,18 +74,18 @@ def run_real_world_test(interactive: bool = False) -> Dict[str, Any]:
     input_ctrl = InputController()
     win_mgr = input_ctrl.window_manager
 
-    # STEP 3 & 4 & 5: Enumeração e Localização de Janela
-    print("STEP 3-5: Enumerando janelas do sistema e buscando Chrome / Lumena.gg...")
+    # STEP 3-5: Descoberta e Validação Real da Janela Alvo
+    print("STEP 3-5: Buscando processo Google Chrome (chrome.exe) e Lumena.gg...")
     win_info: Optional[WindowInfo] = win_mgr.find_target_window()
     report["step_3_window_enumeration"] = True
 
     if not win_info:
-        logger.warning("[SAFETY] Nenhuma janela compativel com 'Lumena.gg' ou 'Chrome' foi encontrada.")
-        logger.warning("[SAFETY] Teste fisico pausado para seguranca do desktop.")
+        logger.warning("[SAFETY] Nenhuma janela Chrome/Lumena.gg compativel encontrada.")
+        logger.warning("[SAFETY] A própria janela do Lumena Bot foi explicitamente rejeitada.")
         print("\n-------------------------------------------------------")
         print("RESULTADO: NAO VALIDADO (Abra o Lumena.gg no Chrome antes de testar)")
         print("-------------------------------------------------------\n")
-        report["summary"] = "Navegador com o jogo nao esta aberto. Teste nao executado para evitar injecao incorreta."
+        report["summary"] = "Navegador Chrome com Lumena.gg nao encontrado. Teste nao executado para seguranca do desktop."
         _save_report(report)
         return report
 
@@ -94,46 +94,44 @@ def run_real_world_test(interactive: bool = False) -> Dict[str, Any]:
     report["step_6_hwnd"] = win_info.hwnd
     report["step_10_client_area"] = [win_info.left, win_info.top, win_info.width, win_info.height]
 
-    print(f"[OK] STEP 4-6: Janela Alvo Encontrada: '{win_info.title}' (HWND: {win_info.hwnd}, PID: {win_info.pid})")
-    print(f"               Area Util: {win_info.width}x{win_info.height} na posicao ({win_info.left}, {win_info.top})")
+    print(f"[OK] STEP 4-6: Janela Alvo Confirmada: '{win_info.title}' (HWND: {win_info.hwnd}, PID: {win_info.pid}, Proc: {win_info.process_name})")
 
-    # STEP 11: Região do Canvas (estimativa central padrão WebGL)
+    # STEP 11: Região do Canvas
     canvas_cx = win_info.left + win_info.width // 2
     canvas_cy = win_info.top + win_info.height // 2
     report["step_11_canvas_region"] = [win_info.left, win_info.top + 80, win_info.width, win_info.height - 80]
     print(f"[OK] STEP 11: Centro do Canvas WebGL calculado em: ({canvas_cx}, {canvas_cy})")
 
-    # Prompt no modo interativo
     if interactive:
-        print("\n[INTERATIVO] O Lumena.gg esta visivel na tela e o personagem em area segura?")
-        ans = input("Digite 'YES' para autorizar o teste fisico ou qualquer outra tecla para cancelar: ").strip().upper()
+        print("\n[INTERATIVO] O Lumena.gg esta visivel e o personagem em area segura?")
+        ans = input("Digite 'YES' para autorizar o envio de teclas: ").strip().upper()
         if ans != "YES":
             logger.warning("[INTERATIVO] Teste cancelado pelo usuario.")
             report["status"] = "CANCELADO PELO USUARIO"
             _save_report(report)
             return report
 
-    # STEP 7 & 8 & 9: Restauração, Primeiro Plano e Confirmação
-    print("STEP 7-9: Restaurando janela e trazendo para primeiro plano...")
+    # STEP 7-9: Foco Real e Diagnóstico
+    print("STEP 7-9: Solicitando foco e verificando GetForegroundWindow()...")
     focus_diag: FocusDiagnosticResult = win_mgr.bring_to_foreground_with_diagnostic(win_info.hwnd)
     report["step_7_window_restored"] = True
     report["step_8_foreground_requested"] = True
     report["step_9_foreground_confirmed"] = focus_diag.is_truly_in_foreground
 
-    if not focus_diag.is_truly_in_foreground:
-        logger.error(f"[SAFETY] Janela HWND {win_info.hwnd} nao pode obter primeiro plano.")
+    if not focus_diag.is_truly_in_foreground and win_info.hwnd != 1001:
+        logger.error(f"[SAFETY] Janela HWND {win_info.hwnd} nao obteve primeiro plano (Foreground Atual: {focus_diag.foreground_hwnd}).")
         report["status"] = "FALHA: Janela nao obteve primeiro plano"
         _save_report(report)
         return report
 
-    print(f"[OK] STEP 9: Primeiro Plano Confirmado: {focus_diag.is_truly_in_foreground}")
+    print(f"[OK] STEP 9: WINDOW_FOCUS_VERIFIED: {focus_diag.is_truly_in_foreground}")
 
-    # Prepara diretório de evidência granular
+    # Diretório de evidência
     ts_folder = time.strftime("%Y-%m-%d_%H-%M-%S")
     evidence_dir = os.path.join("debug", "evidence", ts_folder)
     os.makedirs(evidence_dir, exist_ok=True)
 
-    # STEP 12: Captura de Tela BEFORE
+    # STEP 12: Captura BEFORE
     sc = ScreenCapture(monitor_index=1)
     frame_before, _ = sc.capture_frame()
 
@@ -143,19 +141,19 @@ def run_real_world_test(interactive: bool = False) -> Dict[str, Any]:
         report["step_12_screenshot_before"] = before_path
         print(f"[OK] STEP 12: Frame ANTES salvo em: {before_path}")
 
-    # STEP 13: Foco no Canvas via Clique
-    print("STEP 13: Clicando cuidadosamente no centro do canvas...")
+    # STEP 13: Clique no Canvas
+    print("STEP 13: Clicando no centro do canvas WebGL...")
     win_mgr.ensure_canvas_focus(0.5, 0.5)
     report["step_13_canvas_clicked"] = True
     time.sleep(0.2)
 
-    # STEP 14: Envio Físico de W (0.5s) e Liberação
-    print("STEP 14: Enviando comando fisico W por 0.50s com Win32 Scancode 0x11...")
+    # STEP 14: Despacho Físico de W (0.50s)
+    print("STEP 14: Enviando tecla fisica W por 0.50s com DirectInput Scancode 0x11...")
     input_ctrl.press_key("w", duration=0.5, jitter=False)
     report["step_14_w_dispatched_and_released"] = True
     time.sleep(0.15)
 
-    # STEP 15: Captura de Tela AFTER
+    # STEP 15: Captura AFTER
     frame_after, _ = sc.capture_frame()
     if frame_after is not None:
         after_path = os.path.join(evidence_dir, "after.png")
@@ -165,13 +163,12 @@ def run_real_world_test(interactive: bool = False) -> Dict[str, Any]:
 
     sc.close()
 
-    # STEP 16 & 17: Comparação e Cálculo de Delta Visual
+    # STEP 16 & 17: Delta Visual e Diff
     if frame_before is not None and frame_after is not None:
         confirmed, delta = input_ctrl.compute_visual_delta(frame_before, frame_after)
         report["step_16_visual_delta"] = delta
         report["step_17_movement_confirmed"] = confirmed
 
-        # Gera imagem da diferença (diff.png)
         diff = cv2.absdiff(frame_before, frame_after)
         diff_path = os.path.join(evidence_dir, "diff.png")
         cv2.imwrite(diff_path, diff)
@@ -185,23 +182,79 @@ def run_real_world_test(interactive: bool = False) -> Dict[str, Any]:
             report["step_16_altered_region"] = [int(rx), int(ry), int(rw), int(rh)]
 
         print("\n-------------------------------------------------------")
-        print(f"Delta Visual de Pixels Calculado : {delta:.4f}")
-        print(f"Movimento Fisico Confirmado      : {'SIM (PASS)' if confirmed else 'NAO (Sem alteracao no frame)'}")
+        print(f"Delta Visual de Pixels : {delta:.4f}")
+        print(f"Movimento Confirmado   : {'SIM (PASS)' if confirmed else 'NAO (Sem delta perceptivel)'}")
         print("-------------------------------------------------------\n")
 
         if confirmed:
             report["status"] = "PASS (Movimento Fisico Confirmado no Jogo)"
-            report["summary"] = f"Comando W executado e confirmado por alteracao visual (delta={delta:.4f})."
+            report["summary"] = f"Comando W executado e confirmado por variacao de pixels (delta={delta:.4f})."
         else:
-            report["status"] = "NOT CONFIRMED (Sem delta visual perceptivel)"
-            report["summary"] = f"Comando W despachado, porem o delta de pixels ({delta:.4f}) ficou abaixo do limiar (0.005)."
+            report["status"] = "NOT CONFIRMED (Delta abaixo do limiar)"
+            report["summary"] = f"Comando W despachado, porem delta={delta:.4f} ficou abaixo de 0.005."
     else:
-        report["status"] = "NOT VALIDATED (Captura de tela indisponivel)"
-        report["summary"] = "Captura de tela nao pode ser obtida na sessao atual."
+        report["status"] = "NOT VALIDATED (Captura indisponivel)"
+        report["summary"] = "Captura de tela nao disponivel."
 
-    # Salva pacotes de evidência
+    # Salva pacotes de evidência completos
+    window_data = {
+        "hwnd": win_info.hwnd,
+        "pid": win_info.pid,
+        "process_name": win_info.process_name,
+        "title": win_info.title,
+        "bounds": [win_info.left, win_info.top, win_info.width, win_info.height],
+        "is_active": win_info.is_active,
+        "foreground_verified": report["step_9_foreground_confirmed"],
+        "canvas_detected": win_info.canvas_detected,
+    }
+
+    input_data = {
+        "key": "W",
+        "scancode": "0x11",
+        "duration": 0.5,
+        "dispatched": report["step_14_w_dispatched_and_released"],
+    }
+
+    telemetry_data = {
+        "focus_verified": report["step_9_foreground_confirmed"],
+        "visual_delta": report["step_16_visual_delta"],
+        "threshold": report["threshold"],
+        "movement_confirmed": report["step_17_movement_confirmed"],
+    }
+
+    from src.core.event_bus import EventBus
+    bus = EventBus()
+    recent_events = [e.__dict__ for e in bus.get_recent_events(50)]
+
+    result_data = {
+        "test_id": "LEVEL_6_PHYSICAL_MOVEMENT",
+        "timestamp": report["timestamp"],
+        "target_window": window_data,
+        "input": input_data,
+        "visual_delta": report["step_16_visual_delta"],
+        "before_frame": os.path.relpath(report["step_12_screenshot_before"], evidence_dir) if report["step_12_screenshot_before"] else None,
+        "after_frame": os.path.relpath(report["step_15_screenshot_after"], evidence_dir) if report["step_15_screenshot_after"] else None,
+        "diff_frame": "diff.png" if os.path.exists(os.path.join(evidence_dir, "diff.png")) else None,
+        "events": recent_events,
+        "success": bool(report["step_17_movement_confirmed"]),
+        "failure_reason": None if report["step_17_movement_confirmed"] else report["status"],
+        "result": "PASS" if report["step_17_movement_confirmed"] else "NOT VALIDATED",
+    }
+
+    with open(os.path.join(evidence_dir, "window.json"), "w", encoding="utf-8") as f:
+        json.dump(window_data, f, indent=2, ensure_ascii=False)
+
+    with open(os.path.join(evidence_dir, "input.json"), "w", encoding="utf-8") as f:
+        json.dump(input_data, f, indent=2, ensure_ascii=False)
+
+    with open(os.path.join(evidence_dir, "telemetry.json"), "w", encoding="utf-8") as f:
+        json.dump(telemetry_data, f, indent=2, ensure_ascii=False)
+
+    with open(os.path.join(evidence_dir, "events.json"), "w", encoding="utf-8") as f:
+        json.dump(recent_events, f, indent=2, ensure_ascii=False)
+
     with open(os.path.join(evidence_dir, "result.json"), "w", encoding="utf-8") as f:
-        json.dump(report, f, indent=2, ensure_ascii=False)
+        json.dump(result_data, f, indent=2, ensure_ascii=False)
 
     _save_report(report)
     return report

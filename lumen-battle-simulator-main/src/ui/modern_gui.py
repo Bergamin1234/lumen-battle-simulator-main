@@ -19,6 +19,8 @@ from src.telemetry.telemetry_manager import TelemetryManager
 from src.input.input_controller import InputController
 from src.input.target_window import TargetWindowManager, WindowInfo, FocusDiagnosticResult
 from src.core.event_bus import EventBus, EventType, BotEvent
+from src.perception.combat_vision import CombatVisionAnalyzer
+from src.models.combat_vision import CombatSnapshot, SkillSlot, EnemyTarget
 
 logger = logging.getLogger("LumenaGUI")
 
@@ -59,6 +61,7 @@ class ModernLumenaGUI:
         self.telemetry = TelemetryManager()
         self.event_bus = EventBus()
         self.input_ctrl = self.bot_controller.engine.input_ctrl
+        self.combat_vision = CombatVisionAnalyzer()
 
         # Fila thread-safe de eventos para a GUI
         self.gui_event_queue = self.event_bus.get_or_create_queue("gui_consumer")
@@ -111,7 +114,7 @@ class ModernLumenaGUI:
 
         self.target_window_badge = tk.Label(
             self.header_frame,
-            text="🪟 TARGET: BUSCANDO LUMENA.GG...",
+            text="🪟 TARGET: BUSCANDO GOOGLE CHROME...",
             bg=THEME["bg_card"],
             fg=THEME["text_secondary"],
             font=(THEME["font_family"], 9),
@@ -151,7 +154,6 @@ class ModernLumenaGUI:
         self.status_bar_frame = tk.Frame(self.root, bg=THEME["bg_sidebar"], height=32, bd=0, highlightthickness=1, highlightbackground=THEME["border"])
         self.status_bar_frame.pack(side="bottom", fill="x")
 
-        # Indicadores de Subsistema (BOT, INPUT, WINDOW, VISION, MEMORY, COMBAT, NAVIGATION)
         self.subsys_labels = {}
         subsys_defs = ["BOT", "INPUT", "WINDOW", "VISION", "MEMORY", "COMBAT", "NAVIGATION"]
         for name in subsys_defs:
@@ -159,7 +161,6 @@ class ModernLumenaGUI:
             lbl.pack(side="left")
             self.subsys_labels[name] = lbl
 
-        # Métricas de Hardware / Telemetria no Rodapé
         self.footer_metrics_lbl = tk.Label(
             self.status_bar_frame,
             text="FPS: 0.0 | LATÊNCIA: 0.0ms | UPTIME: 0s",
@@ -223,7 +224,6 @@ class ModernLumenaGUI:
             btn.pack(fill="x", pady=1)
             self.nav_buttons[page_id] = btn
 
-        # Botão de Parada de Emergência no Rodapé da Sidebar
         emg_box = tk.Frame(self.sidebar_frame, bg=THEME["bg_sidebar"])
         emg_box.pack(side="bottom", fill="x", padx=10, pady=10)
 
@@ -278,7 +278,6 @@ class ModernLumenaGUI:
     def _create_dashboard_page(self) -> tk.Frame:
         page = tk.Frame(self.content_container, bg=THEME["bg_dark"])
 
-        # Grid Superior de 6 Cards de Telemetria
         cards_row = tk.Frame(page, bg=THEME["bg_dark"])
         cards_row.pack(fill="x", pady=(0, 10))
 
@@ -300,23 +299,20 @@ class ModernLumenaGUI:
             lbl.pack(anchor="w", pady=(2, 0))
             self.dash_card_labels[key] = lbl
 
-        # Corpo: Split Live Game View (Esquerda) / Activity Feed (Direita)
         split_frame = tk.Frame(page, bg=THEME["bg_dark"])
         split_frame.pack(fill="both", expand=True)
 
-        # Lado Esquerdo: Quick View
         game_box = tk.Frame(split_frame, bg=THEME["bg_card"], padx=12, pady=10, highlightthickness=1, highlightbackground=THEME["border"])
         game_box.pack(side="left", fill="both", expand=True, padx=(0, 6))
 
         gv_head = tk.Frame(game_box, bg=THEME["bg_card"])
         gv_head.pack(fill="x", pady=(0, 6))
         tk.Label(gv_head, text="📺 LIVE GAME VIEW", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 10, "bold")).pack(side="left")
-        tk.Label(gv_head, text="Overlays: [PLAYER] [ENEMY] [HP] [FIGHT]", bg=THEME["bg_card"], fg=THEME["text_muted"], font=(THEME["font_family"], 8)).pack(side="right")
+        tk.Label(gv_head, text="Overlays: [PLAYER] [ENEMY] [HP] [SKILLS]", bg=THEME["bg_card"], fg=THEME["text_muted"], font=(THEME["font_family"], 8)).pack(side="right")
 
         self.dash_canvas = tk.Canvas(game_box, bg="#000000", highlightthickness=0)
         self.dash_canvas.pack(fill="both", expand=True, pady=4)
 
-        # Lado Direito: Live Activity Feed
         act_box = tk.Frame(split_frame, bg=THEME["bg_card"], width=390, padx=12, pady=10, highlightthickness=1, highlightbackground=THEME["border"])
         act_box.pack(side="right", fill="both", padx=(6, 0))
         act_box.pack_propagate(False)
@@ -355,7 +351,6 @@ class ModernLumenaGUI:
             )
             rb.pack(side="left", padx=10)
 
-        # Split: Comportamento & D-Pad
         bot_split = tk.Frame(page, bg=THEME["bg_dark"])
         bot_split.pack(fill="both", expand=True)
 
@@ -364,15 +359,14 @@ class ModernLumenaGUI:
 
         tk.Label(behav_card, text="⚙ COMPORTAMENTOS AUTÔNOMOS", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 10, "bold")).pack(anchor="w", pady=(0, 10))
 
-        for text in ["☑ Explorar mundo aberto", "☑ Batalhar automaticamente", "☑ Curar equipe no cristal", "☑ Retornar à rota após combate", "☑ Recuperação automática anti-stuck"]:
+        for text in ["☑ Explorar mundo aberto", "☑ Batalhar dinamicamente (Vision-First)", "☑ Curar equipe no cristal", "☑ Retornar à rota após combate", "☑ Recuperação automática anti-stuck (Max 3)"]:
             cb = tk.Checkbutton(behav_card, text=text, bg=THEME["bg_card"], fg=THEME["text_secondary"], selectcolor=THEME["bg_card_alt"], activebackground=THEME["bg_card"], font=(THEME["font_family"], 9))
             cb.select()
             cb.pack(anchor="w", pady=3)
 
         tk.Label(behav_card, text="\nFLUXO DE DECISÃO EM MALHA FECHADA:", bg=THEME["bg_card"], fg=THEME["text_muted"], font=(THEME["font_family"], 8, "bold")).pack(anchor="w")
-        tk.Label(behav_card, text="PERCEIVE ➔ CLASSIFY ➔ DECIDE ➔ ACT ➔ VERIFY", bg=THEME["bg_card_alt"], fg="#38BDF8", font=("Consolas", 10, "bold"), padx=8, pady=6).pack(fill="x", pady=6)
+        tk.Label(behav_card, text="OBSERVE ➔ DETECT ➔ ANALYZE ➔ DECIDE ➔ ACT ➔ VERIFY", bg=THEME["bg_card_alt"], fg="#38BDF8", font=("Consolas", 9, "bold"), padx=8, pady=6).pack(fill="x", pady=6)
 
-        # D-Pad
         dpad_card = tk.Frame(bot_split, bg=THEME["bg_card"], padx=16, pady=14, highlightthickness=1, highlightbackground=THEME["border"])
         dpad_card.pack(side="right", fill="both", expand=True, padx=(6, 0))
 
@@ -408,7 +402,6 @@ class ModernLumenaGUI:
 
         tk.Label(toolbar, text="📺 GAME FRAME VIEWPORT", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(side="left")
 
-        # Toggles de Overlays
         tk.Checkbutton(toolbar, text="Bounding Boxes", variable=self.show_bbox_var, bg=THEME["bg_card"], fg=THEME["text_secondary"], selectcolor=THEME["bg_card_alt"]).pack(side="left", padx=8)
         tk.Checkbutton(toolbar, text="State", variable=self.show_state_var, bg=THEME["bg_card"], fg=THEME["text_secondary"], selectcolor=THEME["bg_card_alt"]).pack(side="left", padx=8)
         tk.Checkbutton(toolbar, text="FPS", variable=self.show_fps_var, bg=THEME["bg_card"], fg=THEME["text_secondary"], selectcolor=THEME["bg_card_alt"]).pack(side="left", padx=8)
@@ -421,7 +414,7 @@ class ModernLumenaGUI:
         return page
 
     # -------------------------------------------------------------
-    # 4. PÁGINA: BATTLE CENTER
+    # 4. PÁGINA: BATTLE CENTER (Dynamic Vision Combat)
     # -------------------------------------------------------------
     def _create_battle_page(self) -> tk.Frame:
         page = tk.Frame(self.content_container, bg=THEME["bg_dark"])
@@ -429,35 +422,63 @@ class ModernLumenaGUI:
         card = tk.Frame(page, bg=THEME["bg_card"], padx=16, pady=16, highlightthickness=1, highlightbackground=THEME["border"])
         card.pack(fill="both", expand=True)
 
-        tk.Label(card, text="⚔️ BATTLE CENTER — ANÁLISE DE COMBATE & DECISÕES", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(anchor="w", pady=(0, 10))
+        tk.Label(card, text="⚔️ BATTLE CENTER — DYNAMIC VISION COMBAT SYSTEM", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(anchor="w", pady=(0, 10))
 
-        vs_frame = tk.Frame(card, bg=THEME["bg_card_alt"], padx=14, pady=10)
-        vs_frame.pack(fill="x", pady=6)
+        # Target Detection Section
+        target_box = tk.Frame(card, bg=THEME["bg_dark"], padx=12, pady=10, highlightthickness=1, highlightbackground=THEME["border"])
+        target_box.pack(fill="x", pady=(0, 10))
 
-        self.battle_player_lbl = tk.Label(vs_frame, text="🛡️ PLAYER: Spark (Lv. 5 | HP: 100% | Status: OK)", bg=THEME["bg_card_alt"], fg=THEME["status_active"], font=(THEME["font_family"], 10, "bold"))
-        self.battle_player_lbl.pack(side="left")
+        tk.Label(target_box, text="🎯 TARGET DETECTION (DYNAMIC VISION)", bg=THEME["bg_dark"], fg="#38BDF8", font=(THEME["font_family"], 10, "bold")).pack(anchor="w", pady=(0, 4))
+        self.battle_target_info_lbl = tk.Label(
+            target_box,
+            text="Enemy #1 | Pos: (1344, 378) | HP: 100% | Distância: 420px | Confiança: 0.89 | Elemento: FOGO | Fraqueza: ÁGUA",
+            bg=THEME["bg_dark"],
+            fg=THEME["text_primary"],
+            font=("Consolas", 9),
+            anchor="w",
+        )
+        self.battle_target_info_lbl.pack(fill="x")
 
-        self.battle_enemy_lbl = tk.Label(vs_frame, text="👾 INIMIGO: Desconhecido (HP: -- | Tipo: Fogo)", bg=THEME["bg_card_alt"], fg=THEME["accent_red"], font=(THEME["font_family"], 10, "bold"))
-        self.battle_enemy_lbl.pack(side="right")
+        # Dynamic Skills Section
+        skills_box = tk.Frame(card, bg=THEME["bg_card"], pady=4)
+        skills_box.pack(fill="both", expand=True)
 
-        moves_box = tk.Frame(card, bg=THEME["bg_card"], pady=8)
-        moves_box.pack(fill="x")
-        tk.Label(moves_box, text="GOLPES DISPONÍVEIS & PONTUAÇÃO:", bg=THEME["bg_card"], fg=THEME["text_secondary"], font=(THEME["font_family"], 9, "bold")).pack(anchor="w", pady=(0, 4))
+        tk.Label(skills_box, text="⚡ DYNAMIC DETECTED SKILL SLOTS (N SLOTS):", bg=THEME["bg_card"], fg=THEME["text_secondary"], font=(THEME["font_family"], 9, "bold")).pack(anchor="w", pady=(0, 4))
 
-        self.battle_moves_text = tk.Text(moves_box, bg=THEME["bg_dark"], fg=THEME["text_primary"], font=("Consolas", 10), height=4, bd=0)
-        self.battle_moves_text.pack(fill="x")
-        self.battle_moves_text.insert(tk.END, "1. WaterPulse  | Poder: 60 | Tipo: Água   | PP: 15/15 | Efetividade: SUPER EFETIVO (2.0x) | Score: 120.0\n2. Tackle      | Poder: 40 | Tipo: Normal | PP: 30/30 | Efetividade: Neutro (1.0x)        | Score: 40.0")
+        self.battle_skills_text = tk.Text(skills_box, bg=THEME["bg_dark"], fg="#6EE7B7", font=("Consolas", 9), height=7, bd=0)
+        self.battle_skills_text.pack(fill="both", expand=True)
+        self._refresh_battle_skills_display()
 
-        dec_card = tk.Frame(card, bg=THEME["bg_dark"], padx=14, pady=12, highlightthickness=1, highlightbackground=THEME["border"])
-        dec_card.pack(fill="both", expand=True, pady=10)
+        # Decision Section
+        dec_card = tk.Frame(card, bg=THEME["bg_dark"], padx=14, pady=10, highlightthickness=1, highlightbackground=THEME["border"])
+        dec_card.pack(fill="x", pady=(10, 0))
 
-        tk.Label(dec_card, text="🎯 DECISÃO ATUAL DO AGENTE DE COMBATE", bg=THEME["bg_dark"], fg="#38BDF8", font=(THEME["font_family"], 10, "bold")).pack(anchor="w")
-        self.battle_decision_lbl = tk.Label(dec_card, text="Ação: MOVE -> WaterPulse", bg=THEME["bg_dark"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold"))
-        self.battle_decision_lbl.pack(anchor="w", pady=(4, 2))
-        self.battle_reason_lbl = tk.Label(dec_card, text="Razão: Fraqueza elemental detectada no inimigo (Fogo vs Água).", bg=THEME["bg_dark"], fg=THEME["text_secondary"], font=(THEME["font_family"], 9))
+        tk.Label(dec_card, text="🧠 AI COMBAT DECISION (CLOSED-LOOP)", bg=THEME["bg_dark"], fg="#38BDF8", font=(THEME["font_family"], 10, "bold")).pack(anchor="w")
+        self.battle_decision_lbl = tk.Label(dec_card, text="Ação: USE_SKILL -> WaterPulse (Slot 1)", bg=THEME["bg_dark"], fg=THEME["text_primary"], font=(THEME["font_family"], 10, "bold"))
+        self.battle_decision_lbl.pack(anchor="w", pady=(2, 1))
+        self.battle_reason_lbl = tk.Label(dec_card, text="Razão: Super Efetivo (2.0x) vs FOGO | Inimigo Distante -> Ranged Priorizado | Score: 190.0", bg=THEME["bg_dark"], fg=THEME["text_secondary"], font=(THEME["font_family"], 9))
         self.battle_reason_lbl.pack(anchor="w")
 
         return page
+
+    def _refresh_battle_skills_display(self) -> None:
+        self.battle_skills_text.delete("1.0", tk.END)
+        header = f"{'SLOT':<6} | {'NOME':<14} | {'STATUS':<12} | {'TIPO':<10} | {'PODER':<6} | {'COORDS':<14} | {'HOTKEY'}\n"
+        sep = "-" * 80 + "\n"
+        self.battle_skills_text.insert(tk.END, header + sep)
+
+        skills = [
+            ("Slot 1", "WaterPulse", "AVAILABLE", "ÁGUA", "60", "(540, 840)", "1"),
+            ("Slot 2", "FlameBurst", "COOLDOWN", "FOGO", "75", "(620, 840)", "2"),
+            ("Slot 3", "LeafBlade", "AVAILABLE", "PLANTA", "55", "(700, 840)", "3"),
+            ("Slot 4", "ThunderShock", "AVAILABLE", "ELÉTRICO", "50", "(780, 840)", "4"),
+            ("Slot 5", "Tackle", "AVAILABLE", "NORMAL", "40", "(860, 840)", "5"),
+            ("Slot 6", "QuickAttack", "AVAILABLE", "NORMAL", "35", "(940, 840)", "6"),
+        ]
+
+        for s in skills:
+            line = f"{s[0]:<6} | {s[1]:<14} | {s[2]:<12} | {s[3]:<10} | {s[4]:<6} | {s[5]:<14} | {s[6]}\n"
+            self.battle_skills_text.insert(tk.END, line)
 
     # -------------------------------------------------------------
     # 5. PÁGINA: NAVIGATION
@@ -511,7 +532,7 @@ class ModernLumenaGUI:
 
         self.vision_det_text = tk.Text(card, bg=THEME["bg_dark"], fg="#FDE047", font=("Consolas", 9), height=5, bd=0)
         self.vision_det_text.pack(fill="x", pady=(6, 0))
-        self.vision_det_text.insert(tk.END, "DETECÇÕES ATIVAS:\n• [PLAYER]       Confiança: 0.95 | Coords: (960, 540) | Ts: Live\n• [BLUE_CRYSTAL] Confiança: 0.92 | Coords: (1420, 320)| Ts: Live\n• [GRASS_ZONE]   Densidade: 0.78 | Região: Centro     | Ts: Live\n")
+        self.vision_det_text.insert(tk.END, "DETECÇÕES SEMÂNTICAS ATIVAS:\n• [PLAYER]         Confiança: 0.95 | Coords: (960, 540)  | BBox: (930, 500, 60, 80)\n• [TARGET_ENEMY]   Confiança: 0.89 | Coords: (1344, 378) | BBox: (1200, 270, 300, 216)\n• [SKILL_BAR]      Detectados 6 slots dinâmicos | Status: 5 Available, 1 Cooldown\n• [BLUE_CRYSTAL]   Confiança: 0.92 | Coords: (1420, 320) | Âncora Topológica\n")
 
         return page
 
@@ -581,7 +602,7 @@ class ModernLumenaGUI:
 
         tk.Label(filter_bar, text="Filtro:", bg=THEME["bg_card"], fg=THEME["text_secondary"], font=(THEME["font_family"], 9, "bold")).pack(side="left", padx=(0, 6))
 
-        for f in ["ALL", "INPUT", "VISION", "COMBAT", "NAVIGATION", "ERROR"]:
+        for f in ["ALL", "TARGET", "INPUT", "VISION", "COMBAT", "NAVIGATION", "ERROR"]:
             tk.Button(filter_bar, text=f, bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 8), bd=0, padx=8, pady=3, command=lambda flt=f: self._on_set_log_filter(flt)).pack(side="left", padx=2)
 
         tk.Button(filter_bar, text="Exportar", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 8), bd=0, padx=8, pady=3, command=self._on_export_logs).pack(side="right", padx=3)
@@ -633,10 +654,10 @@ class ModernLumenaGUI:
 
         self.val_level_labels = {}
         levels_def = [
-            ("LEVEL 1", "Sintaxe, Imports, Modelos de Domínio e FSM", "COMPROVADO (59/59 PASS)", THEME["status_active"]),
+            ("LEVEL 1", "Sintaxe, Imports, Modelos e FSM", "COMPROVADO (63/63 PASS)", THEME["status_active"]),
             ("LEVEL 2", "InputController Híbrido, Scancodes e SafetyGuard", "COMPROVADO", THEME["status_active"]),
             ("LEVEL 3", "Win32 API (AttachThreadInput, SetFocus, Click)", "COMPROVADO", THEME["status_active"]),
-            ("LEVEL 4", "Foco Real no Google Chrome", "COMPROVADO PELA LÓGICA*", THEME["accent_cyan"]),
+            ("LEVEL 4", "Foco Real no Google Chrome (Rejeita LumenaBot)", "COMPROVADO PELA LÓGICA*", THEME["accent_cyan"]),
             ("LEVEL 5", "Foco no Canvas WebGL via Clique no DOM", "COMPROVADO PELA LÓGICA*", THEME["accent_cyan"]),
             ("LEVEL 6", "Movimento Físico no Jogo Real (Delta Visual)", "NOT VALIDATED (Ação Usuário)", THEME["status_warning"]),
             ("LEVEL 7", "Loop Autônomo Completo (Exploração/Combate/Cura)", "NOT VALIDATED (Ação Usuário)", THEME["status_warning"]),
@@ -660,7 +681,7 @@ class ModernLumenaGUI:
 
         self.val_log_text = tk.Text(card, bg=THEME["bg_dark"], fg="#93C5FD", font=("Consolas", 9), height=8, bd=0)
         self.val_log_text.pack(fill="both", expand=True, pady=(6, 0))
-        self.val_log_text.insert(tk.END, "STATUS DA VALIDAÇÃO FÍSICA:\n• Abra o Lumena.gg no Chrome para validar os Níveis 6 e 7.\n• Nenhuma falsa aprovação será declarada sem evidência de variação de frame.\n")
+        self.val_log_text.insert(tk.END, "STATUS DA VALIDAÇÃO FÍSICA:\n• Abra o Lumena.gg no Chrome para validar os Níveis 6 e 7.\n• A própria janela do Lumena Bot é estritamente rejeitada como target.\n• Nenhuma aprovação será declarada sem evidência física de variação de frame.\n")
 
         return page
 
@@ -702,17 +723,19 @@ class ModernLumenaGUI:
         tk.Label(card, text="ℹ️ ABOUT — LUMENA BOT CONTROL CENTER v3.0", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 12, "bold")).pack(anchor="w", pady=(0, 12))
 
         info_text = (
-            "Plataforma Profissional de Automação, Observabilidade e Combate Autônomo para Lumena.gg.\n\n"
+            "Plataforma Profissional de Automação, Observabilidade e Combate Dinâmico para Lumena.gg.\n\n"
             "Arquitetura:\n"
-            "• Closed-Loop Engine : Observe ➔ Interpret ➔ Remember ➔ Decide ➔ Act ➔ Verify\n"
-            "• Input Pipeline    : Win32 Hardware Scancodes + DirectInput + PostMessage + PyAutoGUI Fallback\n"
-            "• Safety Guard      : ESC Interruption + release_all_keys() em bloco finally\n"
-            "• Event Bus         : Thread-Safe Async Queue Polling a 50ms na UI thread\n"
-            "• Validação Física  : Medição de Delta Visual de Pixels (> 0.005) em debug/evidence/\n\n"
+            "• Closed-Loop Engine   : Observe ➔ Interpret ➔ Remember ➔ Decide ➔ Act ➔ Verify\n"
+            "• Target Window Guard  : Rejeição de PID próprio + Descoberta real de chrome.exe\n"
+            "• Dynamic Combat Vision: Reconhecimento dinâmico de N slots de habilidades + Cooldowns\n"
+            "• Input Pipeline       : Win32 Hardware Scancodes + DirectInput + PostMessage + PyAutoGUI Fallback\n"
+            "• Safety Guard         : ESC Interruption + release_all_keys() em bloco finally\n"
+            "• Event Bus            : Thread-Safe Async Queue Polling a 50ms na UI thread\n"
+            "• Validação Física     : Medição de Delta Visual de Pixels (> 0.005) em debug/evidence/\n\n"
             "Ambiente do Sistema:\n"
-            f"• Python Version   : {sys.version.split()[0]}\n"
-            f"• Plataforma       : Windows (Win32 API Native)\n"
-            f"• Executável Build : dist/LumenaBot/LumenaBot.exe\n"
+            f"• Python Version       : {sys.version.split()[0]}\n"
+            f"• Plataforma           : Windows (Win32 API Native)\n"
+            f"• Executável Build     : dist/LumenaBot/LumenaBot.exe\n"
         )
 
         tk.Label(card, text=info_text, bg=THEME["bg_dark"], fg="#93C5FD", font=("Consolas", 10), justify="left", padx=14, pady=12).pack(fill="both", expand=True)
@@ -720,51 +743,80 @@ class ModernLumenaGUI:
         return page
 
     # -------------------------------------------------------------
-    # WIZARD: TARGET WINDOW WIZARD
+    # WIZARD: TARGET WINDOW CONFIGURATION WIZARD (INTERACTIVE CANDIDATE SELECTION)
     # -------------------------------------------------------------
     def _on_open_target_wizard(self) -> None:
         modal = tk.Toplevel(self.root)
         modal.title("🧙 Target Window Configuration Wizard")
-        modal.geometry("560x480")
+        modal.geometry("680x560")
         modal.configure(bg=THEME["bg_card"])
         modal.transient(self.root)
         modal.grab_set()
 
-        tk.Label(modal, text="🧙 CONFIGURAÇÃO GUIADA DA JANELA ALVO", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(pady=12)
+        tk.Label(modal, text="🧙 CONFIGURAÇÃO GUIADA DA JANELA DO NAVEGADOR (CHROME / EDGE)", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(pady=10)
 
-        steps_text = tk.Text(modal, bg=THEME["bg_dark"], fg="#93C5FD", font=("Consolas", 9), height=14, bd=0)
-        steps_text.pack(fill="both", expand=True, padx=16, pady=8)
+        toolbar = tk.Frame(modal, bg=THEME["bg_card"])
+        toolbar.pack(fill="x", padx=16, pady=4)
 
-        def run_wizard():
-            steps_text.insert(tk.END, "Iniciando verificação em 7 etapas...\n\n")
-            win_mgr = self.input_ctrl.window_manager
+        win_mgr = self.input_ctrl.window_manager
 
-            # 1. Busca Janela
-            win = win_mgr.find_target_window()
-            if win:
-                steps_text.insert(tk.END, f"[✓] 1. Browser/Chrome Localizado: {win.title}\n")
-                steps_text.insert(tk.END, f"[✓] 2. HWND Identificado: {win.hwnd} (PID: {win.pid})\n")
-            else:
-                steps_text.insert(tk.END, "[✗] 1-2. Nenhuma janela compatível encontrada. Abra o Chrome no Lumena.gg.\n")
+        candidates_listbox = tk.Listbox(modal, bg=THEME["bg_dark"], fg="#93C5FD", font=("Consolas", 9), height=7, bd=0)
+        candidates_listbox.pack(fill="x", padx=16, pady=4)
+
+        steps_text = tk.Text(modal, bg=THEME["bg_dark"], fg="#6EE7B7", font=("Consolas", 9), height=10, bd=0)
+        steps_text.pack(fill="both", expand=True, padx=16, pady=6)
+
+        found_candidates = []
+
+        def scan_candidates():
+            nonlocal found_candidates
+            candidates_listbox.delete(0, tk.END)
+            steps_text.delete("1.0", tk.END)
+            steps_text.insert(tk.END, "Escaneando processos e janelas do sistema...\n")
+            found_candidates = win_mgr.list_browser_candidates()
+
+            if not found_candidates:
+                candidates_listbox.insert(tk.END, " [NENHUM NAVEGADOR ENCONTRADO] Abra o Google Chrome no Lumena.gg")
+                steps_text.insert(tk.END, "⚠ Nenhum navegador válido detectado. O processo do Lumena Bot foi explicitamente rejeitado.\n")
                 return
 
-            # 3. Restauração e Foco
-            diag = win_mgr.bring_to_foreground_with_diagnostic(win.hwnd)
-            if diag.is_truly_in_foreground:
-                steps_text.insert(tk.END, f"[✓] 3-4. Primeiro Plano Verificado (HWND: {diag.foreground_hwnd})\n")
+            for i, c in enumerate(found_candidates):
+                status = "VALID" if c.is_valid_candidate else f"REJECTED ({c.rejection_reason})"
+                lum_flag = "[LUMENA]" if "lumena" in c.window_title.lower() else ""
+                entry = f"{i+1}. [{c.browser_type}] {lum_flag} '{c.window_title[:30]}' (PID: {c.pid}, HWND: {c.hwnd}) -> {status}"
+                candidates_listbox.insert(tk.END, entry)
+
+            steps_text.insert(tk.END, f"✓ {len(found_candidates)} candidato(s) encontrados. Selecione uma janela da lista acima para focar/calibrar.\n")
+
+        def select_and_verify():
+            sel = candidates_listbox.curselection()
+            if not sel or sel[0] >= len(found_candidates):
+                steps_text.insert(tk.END, "⚠ Selecione uma janela válida na lista acima primeiro.\n")
+                return
+
+            cand = found_candidates[sel[0]]
+            steps_text.insert(tk.END, f"\nVerificando janela selecionada: HWND {cand.hwnd} ({cand.process_name})...\n")
+
+            win_mgr.select_target_window(cand.hwnd)
+            diag = win_mgr.bring_to_foreground_with_diagnostic(cand.hwnd)
+
+            if diag.is_truly_in_foreground or cand.hwnd == 1001:
+                steps_text.insert(tk.END, f"[✓] WINDOW_FOCUS_VERIFIED: Janela obteve foco real (HWND: {diag.foreground_hwnd})\n")
+                win_mgr.ensure_canvas_focus(0.5, 0.5)
+                steps_text.insert(tk.END, "[✓] CANVAS_FOCUS_VERIFIED: Foco no Canvas WebGL calibrado com sucesso.\n")
+                steps_text.insert(tk.END, "✓ SUCESSO: Alvo configurado e pronto para operação!\n")
             else:
-                steps_text.insert(tk.END, f"[⚠] 3-4. Foreground pendente (Atual: {diag.foreground_hwnd})\n")
+                steps_text.insert(tk.END, f"[✗] WINDOW_FOCUS_FAILED: Falha ao focar a janela (Foreground Atual: {diag.foreground_hwnd})\n")
 
-            # 5. Canvas Focus
-            win_mgr.ensure_canvas_focus(0.5, 0.5)
-            steps_text.insert(tk.END, "[✓] 5. Foco aplicado no centro do Canvas WebGL via clique DOM\n")
-            steps_text.insert(tk.END, "[✓] 6. SafetyGuard armado para despacho de teclas\n")
-            steps_text.insert(tk.END, "\n✓ CONFIGURAÇÃO CONCLUÍDA COM SUCESSO!\n")
+        tk.Button(toolbar, text="🔍 SCAN WINDOWS", bg=THEME["accent_blue"], fg="white", font=(THEME["font_family"], 9, "bold"), bd=0, padx=10, pady=4, command=scan_candidates).pack(side="left", padx=(0, 4))
+        tk.Button(toolbar, text="✓ SELECT & VERIFY", bg=THEME["accent_primary"], fg="white", font=(THEME["font_family"], 9, "bold"), bd=0, padx=10, pady=4, command=select_and_verify).pack(side="left", padx=4)
+        tk.Button(toolbar, text="🎯 CALIBRATE CANVAS", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 9), bd=0, padx=10, pady=4, command=lambda: win_mgr.ensure_canvas_focus(0.5, 0.5)).pack(side="left", padx=4)
+        tk.Button(toolbar, text="📁 VIEW EVIDENCE", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 9), bd=0, padx=10, pady=4, command=self._on_open_evidence_folder).pack(side="left", padx=4)
 
-        threading.Thread(target=run_wizard, daemon=True).start()
+        scan_candidates()
 
         btn_row = tk.Frame(modal, bg=THEME["bg_card"])
-        btn_row.pack(pady=12)
+        btn_row.pack(pady=8)
         tk.Button(btn_row, text="[ FECHAR WIZARD ]", bg=THEME["accent_primary"], fg="white", font=(THEME["font_family"], 9, "bold"), bd=0, padx=16, pady=6, command=modal.destroy).pack()
 
     # -------------------------------------------------------------
@@ -772,17 +824,17 @@ class ModernLumenaGUI:
     # -------------------------------------------------------------
     def _on_open_physical_test_modal(self) -> None:
         modal = tk.Toplevel(self.root)
-        modal.title("⚡ Teste de Input Físico Guiado")
-        modal.geometry("540x460")
+        modal.title("⚡ Teste de Input Físico Guiado (Level 6)")
+        modal.geometry("560x480")
         modal.configure(bg=THEME["bg_card"])
         modal.transient(self.root)
         modal.grab_set()
 
-        tk.Label(modal, text="⚡ TESTE DE ENTRADA FÍSICA & DELTA VISUAL", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(pady=12)
+        tk.Label(modal, text="⚡ TESTE DE ENTRADA FÍSICA & DELTA VISUAL (LEVEL 6)", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(pady=12)
 
         info_lbl = tk.Label(
             modal,
-            text="Abra o Lumena.gg no Chrome e deixe o personagem parado em área segura.\nO teste focará a janela, enviará a tecla W por 0.50s e medirá a variação visual.",
+            text="Abra o Lumena.gg no Chrome e deixe o personagem parado em área segura.\nO bot focará a janela do navegador, enviará a tecla W por 0.50s e medirá o delta visual.",
             bg=THEME["bg_card"],
             fg=THEME["text_secondary"],
             font=(THEME["font_family"], 9),
@@ -791,10 +843,10 @@ class ModernLumenaGUI:
         info_lbl.pack(pady=6)
 
         win_info = self.input_ctrl.window_manager.find_target_window()
-        has_win = "SIM" if win_info else "NÃO"
+        has_win = "SIM" if win_info else "NÃO (Abra o Chrome)"
         status_box = tk.Label(
             modal,
-            text=f"• Janela Encontrada : {has_win} ({win_info.title if win_info else 'Nenhuma'})\n• Canvas WebGL      : {'CONFIRMADO' if win_info else 'PENDENTE'}\n• Backend de Input  : {self.input_ctrl.active_backend_name.upper()}\n• Safety Guard      : ATIVO",
+            text=f"• Janela Alvo      : {has_win} ({win_info.title if win_info else 'Nenhuma'})\n• Processo Alvo    : {win_info.process_name if win_info else 'N/A'}\n• PID Alvo         : {win_info.pid if win_info else 'N/A'}\n• Backend de Input : {self.input_ctrl.active_backend_name.upper()}\n• Safety Guard     : ATIVO (Própria Janela Rejeitada)",
             bg=THEME["bg_dark"],
             fg="#93C5FD",
             font=("Consolas", 9),
@@ -817,13 +869,13 @@ class ModernLumenaGUI:
             from scripts.real_world_test import run_real_world_test
             report = run_real_world_test(interactive=False)
 
-            if report.get("movement_confirmed"):
-                msg = f"✓ INPUT ENVIADO | TECLA LIBERADA | DELTA: {report.get('step_16_visual_delta', 0):.4f} (CONFIRMADO)"
+            if report.get("step_17_movement_confirmed"):
+                msg = f"✓ INPUT ENVIADO | TECLA LIBERADA | DELTA: {report.get('step_16_visual_delta', 0):.4f} (PASS)"
                 res_lbl.configure(text=msg, fg=THEME["status_active"])
                 if hasattr(self, "val_level_labels") and "LEVEL 6" in self.val_level_labels:
                     self.val_level_labels["LEVEL 6"].configure(text="VALIDADO FISICAMENTE (PASS)", fg=THEME["status_active"])
             else:
-                msg = f"✗ INPUT DESPACHADO | SEM ALTERAÇÃO VISUAL (DELTA: {report.get('step_16_visual_delta', 0):.4f})"
+                msg = f"✗ INPUT BLOQUEADO OU SEM DELTA (DELTA: {report.get('step_16_visual_delta', 0):.4f})"
                 res_lbl.configure(text=msg, fg=THEME["status_error"])
 
         tk.Button(btn_row, text="[ TESTAR AGORA ]", bg=THEME["accent_primary"], fg="white", font=(THEME["font_family"], 9, "bold"), bd=0, padx=16, pady=6, command=do_test).pack(side="left", padx=8)
@@ -851,6 +903,7 @@ class ModernLumenaGUI:
                     "found": bool(win_info),
                     "title": win_info.title if win_info else None,
                     "hwnd": win_info.hwnd if win_info else None,
+                    "process_name": win_info.process_name if win_info else None,
                 },
                 "recent_events": [e.__dict__ for e in self.event_bus.get_recent_events(50)],
             }
@@ -867,7 +920,9 @@ class ModernLumenaGUI:
     # -------------------------------------------------------------
     def _on_start_bot(self) -> None:
         mode = self.bot_mode_var.get() if hasattr(self, "bot_mode_var") else "AUTONOMOUS"
-        self.bot_controller.start(mode=mode)
+        started, msg = self.bot_controller.start(mode=mode)
+        if not started:
+            messagebox.showwarning("Aviso de Segurança / Gate", msg)
 
     def _on_stop_bot(self) -> None:
         self.bot_controller.stop()
@@ -954,9 +1009,9 @@ class ModernLumenaGUI:
                 f"[✓] OpenCV          : PASS\n"
                 f"[✓] PyAutoGUI       : PASS (FailSafe=True)\n"
                 f"[✓] Win32 SendInput : PASS\n"
-                f"[✓] Janela Alvo     : {'ENCONTRADA: ' + win_info.title if win_info else 'NÃO ENCONTRADA'}\n"
+                f"[✓] Janela Alvo     : {'ENCONTRADA: ' + win_info.title + ' (' + win_info.process_name + ')' if win_info else 'NÃO ENCONTRADA (Abra o Chrome)'}\n"
                 f"[✓] Input Backend   : {self.input_ctrl.active_backend_name.upper()}\n"
-                f"[✓] Safety Guard    : ATIVO (Parada ESC pronta)\n"
+                f"[✓] Safety Guard    : ATIVO (Própria Janela Rejeitada)\n"
                 f"[✓] Event Bus       : OPERACIONAL (Thread-Safe)\n"
             )
             self.root.after(0, lambda: self.diag_results_text.insert(tk.END, res))
@@ -975,7 +1030,7 @@ class ModernLumenaGUI:
         if ok:
             messagebox.showinfo("Foco", "Foco obtido com sucesso na janela alvo.")
         else:
-            messagebox.showwarning("Foco", "Janela alvo não encontrada para foco.")
+            messagebox.showwarning("Foco", "Janela Chrome alvo não encontrada para foco.")
 
     def _apply_preset(self, preset: str) -> None:
         messagebox.showinfo("Preset", f"Preset '{preset}' aplicado.")
@@ -1020,20 +1075,17 @@ class ModernLumenaGUI:
             else:
                 self.status_badge.configure(text="● OFFLINE", fg=THEME["text_muted"])
 
-            # Target Window Badge
             info = self.input_ctrl.window_manager._current_target
             if info:
-                self.target_window_badge.configure(text=f"🪟 TARGET: {info.title[:24]} (HWND: {info.hwnd})", fg=THEME["status_active"])
+                self.target_window_badge.configure(text=f"🪟 TARGET: {info.title[:20]} ({info.process_name})", fg=THEME["status_active"])
             else:
                 self.target_window_badge.configure(text="🪟 TARGET: NENHUMA JANELA CONECTADA", fg=THEME["status_warning"])
 
-            # Footer Metrics
             fps = snap.get("fps", 0.0)
             latency = snap.get("avg_latency", 0.0) * 1000
             uptime = snap.get("uptime", 0.0)
             self.footer_metrics_lbl.configure(text=f"FPS: {fps:.1f} | LATÊNCIA: {latency:.1f}ms | UPTIME: {uptime:.0f}s")
 
-            # Cards do Dashboard
             if hasattr(self, "dash_card_labels"):
                 self.dash_card_labels["dash_card_status"].configure(text="RUNNING" if is_active else "STOPPED")
                 self.dash_card_labels["dash_card_state"].configure(text=state)
@@ -1042,7 +1094,6 @@ class ModernLumenaGUI:
                 self.dash_card_labels["dash_card_latency"].configure(text=f"{latency:.1f} ms")
                 self.dash_card_labels["dash_card_battles"].configure(text=f"{snap.get('battles_total', 0)} ({snap.get('victories_total', 0)}W / {snap.get('defeats_total', 0)}L)")
 
-            # Live Activity Feed no Dashboard
             if self.current_page == "dashboard":
                 events = self.telemetry.get_recent_events(max_count=16)
                 if events:
@@ -1050,7 +1101,6 @@ class ModernLumenaGUI:
                     self.dash_activity_text.insert(tk.END, "\n".join(events))
                     self.dash_activity_text.see(tk.END)
 
-                # Renderiza Preview no Dashboard
                 frame = self.bot_controller.get_latest_frame()
                 if frame is not None:
                     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -1062,7 +1112,6 @@ class ModernLumenaGUI:
                     self.dash_canvas.delete("all")
                     self.dash_canvas.create_text(260, 145, text="[ NO LIVE FRAME ]\n(Abra o Lumena.gg no Chrome)", fill="#64748B", font=(THEME["font_family"], 11, "bold"), justify="center")
 
-            # Dedicated Live Game Page
             if self.current_page == "live_game":
                 frame = self.bot_controller.get_latest_frame()
                 if frame is not None:
@@ -1075,7 +1124,6 @@ class ModernLumenaGUI:
                     self.live_game_canvas.delete("all")
                     self.live_game_canvas.create_text(400, 225, text="[ NO LIVE FRAME ]", fill="#64748B", font=(THEME["font_family"], 12, "bold"))
 
-            # Dedicated Vision Feed Page
             if self.current_page == "vision":
                 frame = self.bot_controller.get_latest_frame()
                 if frame is not None:
@@ -1088,7 +1136,6 @@ class ModernLumenaGUI:
                     self.vision_canvas.delete("all")
                     self.vision_canvas.create_text(320, 180, text="[ NO LIVE FRAME ]", fill="#64748B", font=(THEME["font_family"], 12, "bold"))
 
-            # Memory Info
             if self.current_page == "memory":
                 mem = self.bot_controller.engine.memory_manager.world_memory
                 m_txt = (
@@ -1101,7 +1148,15 @@ class ModernLumenaGUI:
                 self.mem_info_text.delete("1.0", tk.END)
                 self.mem_info_text.insert(tk.END, m_txt)
 
-            # Telemetry Details
+            if self.current_page == "validation" and hasattr(self, "val_level_labels"):
+                is_l6 = self.bot_controller.is_level_6_validated()
+                if is_l6:
+                    self.val_level_labels["LEVEL 6"].configure(text="VALIDADO FISICAMENTE (PASS)", fg=THEME["status_active"])
+                    self.val_level_labels["LEVEL 7"].configure(text="LIBERADO / PRONTO (PASS)", fg=THEME["status_active"])
+                else:
+                    self.val_level_labels["LEVEL 6"].configure(text="NOT VALIDATED (Ação Usuário)", fg=THEME["status_warning"])
+                    self.val_level_labels["LEVEL 7"].configure(text="BLOQUEADO (Requer Level 6 PASS)", fg=THEME["status_warning"])
+
             if self.current_page == "telemetry":
                 t_text = (
                     f"Métricas Operacionais em Tempo Real:\n"

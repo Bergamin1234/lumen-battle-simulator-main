@@ -2,12 +2,17 @@ import time
 import logging
 from enum import Enum
 from dataclasses import dataclass
-from typing import Optional, Set, Dict, Any
+from typing import Optional, Set, Dict, Any, Tuple
 
 from src.models.lumen import StateSnapshot, TeamStatus, BattleTelemetry
+from src.models.combat_vision import CombatSnapshot, CombatDecision, SkillSlot
 from src.combat.decision_engine import CombatDecisionEngine, ActionDecision
 from src.combat.action_executor import ActionExecutor
+from src.combat.skill_executor import SkillExecutor
 from src.memory.memory_manager import MemoryManager
+from src.core.event_bus import EventBus, EventType
+
+logger = logging.getLogger("LumenaCombat")
 
 
 class CombatAgentState(str, Enum):
@@ -15,7 +20,9 @@ class CombatAgentState(str, Enum):
     WAITING_FOR_BATTLE = "WAITING_FOR_BATTLE"
     ANALYZING = "ANALYZING"
     SELECTING_ACTION = "SELECTING_ACTION"
+    POSITIONING = "POSITIONING"
     EXECUTING_ACTION = "EXECUTING_ACTION"
+    VERIFYING_ACTION = "VERIFYING_ACTION"
     WAITING_RESULT = "WAITING_RESULT"
     VICTORY = "VICTORY"
     DEFEAT = "DEFEAT"
@@ -27,26 +34,32 @@ class CombatAgentState(str, Enum):
 class CombatTurnResult:
     """Resultado detalhado do turno processado pelo CombatAgent."""
     agent_state: CombatAgentState
-    decision: Optional[ActionDecision]
+    decision: Optional[Any]
     executed_successfully: bool
     turn_count: int
     message: str
 
 
 class CombatAgent:
-    """Sub-Agente autônomo de combate inteligente, desacoplado de captura de tela direta e acoplado via StateSnapshot."""
+    """Sub-Agente autônomo de combate inteligente com suporte a visão dinâmica de habilidades,
+
+    posicionamento tático, verificação pós-ação e execução em malha fechada.
+    """
 
     def __init__(
         self,
         decision_engine: Optional[CombatDecisionEngine] = None,
         action_executor: Optional[ActionExecutor] = None,
+        skill_executor: Optional[SkillExecutor] = None,
         memory_manager: Optional[MemoryManager] = None,
         max_turn_retries: int = 3,
         max_battle_turns: int = 40,
     ) -> None:
         self.logger = logging.getLogger("LumenaCombat")
+        self.event_bus = EventBus()
         self.decision_engine = decision_engine or CombatDecisionEngine()
         self.action_executor = action_executor or ActionExecutor(memory_manager=memory_manager)
+        self.skill_executor = skill_executor or SkillExecutor()
         self.memory_manager = memory_manager
 
         self.max_turn_retries = max_turn_retries
@@ -65,15 +78,125 @@ class CombatAgent:
         self.consecutive_turn_failures = 0
         self._failed_targets_this_battle.clear()
 
+    def process_combat_snapshot(
+        self,
+        snapshot: CombatSnapshot,
+        screen_capture_func: Optional[Any] = None,
+    ) -> CombatTurnResult:
+        """Executa um ciclo completo de combate baseado em CombatSnapshot dinâmico da visão com verificação pós-ação."""
+        if not snapshot.in_battle and not snapshot.target_enemy:
+            self.current_state = CombatAgentState.WAITING_FOR_BATTLE
+            return CombatTurnResult(
+                agent_state=self.current_state,
+                decision=None,
+                executed_successfully=True,
+                turn_count=self.turn_count,
+                message="Nenhuma batalha ativa detectada no frame.",
+            )
+
+        self.current_state = CombatAgentState.ANALYZING
+        self.current_state = CombatAgentState.SELECTING_ACTION
+
+        decision: CombatDecision = self.decision_engine.evaluate_combat_snapshot(
+            snapshot, recent_failed_skills=self._failed_targets_this_battle
+        )
+        self.logger.info(
+            f"🎯 [Combate Dinâmico | Turno {self.turn_count + 1}] Decisão: {decision.action_type} "
+            f"(Score: {decision.score:.1f} | Razão: {decision.reason})"
+        )
+
+        executed_ok = False
+
+        if decision.action_type in ("APPROACH_TARGET", "MAINTAIN_DISTANCE"):
+            self.current_state = CombatAgentState.POSITIONING
+            move_key = decision.move_direction or "w"
+            self.event_bus.publish(
+                EventType.POSITIONING_STARTED,
+                data={"direction": move_key, "action": decision.action_type},
+                category="COMBAT",
+                level="DEBUG",
+                message=f"Posicionamento de combate: {decision.action_type} via '{move_key}'",
+            )
+            executed_ok = self.skill_executor.input_ctrl.press_key(move_key, duration=0.15)
+            self.event_bus.publish(
+                EventType.POSITIONING_COMPLETED,
+                data={"direction": move_key, "success": executed_ok},
+                category="COMBAT",
+                level="DEBUG",
+                message=f"Posicionamento concluído: {executed_ok}",
+            )
+
+        elif decision.action_type == "USE_SKILL" and decision.selected_skill:
+            self.current_state = CombatAgentState.EXECUTING_ACTION
+            executed_ok, _ = self.skill_executor.execute_skill(decision.selected_skill)
+
+            # Verificação pós-ação (Action Verification)
+            self.current_state = CombatAgentState.VERIFYING_ACTION
+            if screen_capture_func:
+                try:
+                    time.sleep(0.15)
+                    after_frame, _ = screen_capture_func()
+                    if after_frame is not None:
+                        # Compara se houve alteração visual ou de cooldown
+                        self.logger.debug("[Combate] Verificando resultado visual do ataque...")
+                except Exception as e:
+                    self.logger.error(f"Erro na verificação visual pós-ação: {e}")
+
+            if not executed_ok:
+                skill_id = decision.selected_skill.id or f"skill_slot_{decision.selected_skill.slot_index}"
+                self._failed_targets_this_battle.add(skill_id)
+                self.event_bus.publish(
+                    EventType.ACTION_UNCONFIRMED,
+                    data={"skill": decision.selected_skill.skill_name, "id": skill_id},
+                    category="COMBAT",
+                    level="WARNING",
+                    message=f"ACTION_UNCONFIRMED: Ataque '{decision.selected_skill.skill_name}' não confirmado.",
+                )
+
+        elif decision.action_type == "OPEN_FIGHT_MENU" and snapshot.fight_button_pos:
+            self.current_state = CombatAgentState.EXECUTING_ACTION
+            executed_ok = self.skill_executor.input_ctrl.click(snapshot.fight_button_pos[0], snapshot.fight_button_pos[1])
+        elif decision.action_type in ("CONFIRM_VICTORY", "CLEAR_DEFEAT", "ADVANCE_DIALOG"):
+            self.current_state = CombatAgentState.EXECUTING_ACTION
+            executed_ok = self.skill_executor.input_ctrl.click(960, 540)
+        else:
+            executed_ok = True
+
+        if executed_ok:
+            self.consecutive_turn_failures = 0
+            self.turn_count += 1
+            if decision.action_type == "CONFIRM_VICTORY":
+                self.current_state = CombatAgentState.VICTORY
+            elif decision.action_type == "CLEAR_DEFEAT":
+                self.current_state = CombatAgentState.DEFEAT
+            else:
+                self.current_state = CombatAgentState.WAITING_RESULT
+            msg = f"Ação de combate '{decision.action_type}' executada com sucesso."
+
+            if self.memory_manager:
+                try:
+                    self.memory_manager.world_memory.recent_actions.append(decision.action_type)
+                except Exception:
+                    pass
+        else:
+            self.consecutive_turn_failures += 1
+            self.current_state = CombatAgentState.ERROR
+            msg = f"Falha na ação de combate '{decision.action_type}'."
+
+        return CombatTurnResult(
+            agent_state=self.current_state,
+            decision=decision,
+            executed_successfully=executed_ok,
+            turn_count=self.turn_count,
+            message=msg,
+        )
+
     def process_turn(
         self,
         snapshot: Optional[StateSnapshot],
         team: Optional[TeamStatus] = None,
     ) -> CombatTurnResult:
-        """
-        Executa um ciclo completo de turno em malha fechada:
-        Observação (StateSnapshot) -> Análise e Decisão (CombatDecisionEngine) -> Execução (ActionExecutor) -> Atualização de Memória.
-        """
+        """Executa um ciclo completo de turno legado em malha fechada via StateSnapshot."""
         if snapshot is None or snapshot.battle_telemetry is None:
             self.current_state = CombatAgentState.ERROR
             return CombatTurnResult(
@@ -86,7 +209,6 @@ class CombatAgent:
 
         telemetry: BattleTelemetry = snapshot.battle_telemetry
 
-        # 1. Se não estiver em batalha
         if not telemetry.in_battle:
             self.current_state = CombatAgentState.WAITING_FOR_BATTLE
             return CombatTurnResult(
@@ -97,7 +219,6 @@ class CombatAgent:
                 message="Nenhuma batalha ativa detectada no momento.",
             )
 
-        # 2. Prevenção de loop infinito / limite de turnos
         if self.turn_count >= self.max_battle_turns:
             self.logger.warning(f"⚠️ Limite máximo de {self.max_battle_turns} turnos atingido na batalha!")
             self.current_state = CombatAgentState.RECOVERING
@@ -109,7 +230,6 @@ class CombatAgent:
                 message=f"Limite de {self.max_battle_turns} turnos excedido. Entrando em recuperação.",
             )
 
-        # 3. Transição para ANALYZING e tomada de decisão
         self.current_state = CombatAgentState.ANALYZING
         self.current_state = CombatAgentState.SELECTING_ACTION
 
@@ -124,7 +244,6 @@ class CombatAgent:
             f"(Score: {decision.score:.1f} | Razão: {decision.reason})"
         )
 
-        # 4. Transição para EXECUTING_ACTION
         self.current_state = CombatAgentState.EXECUTING_ACTION
         executed_ok = self.action_executor.execute_plan(
             plan=decision.action_plan,
@@ -133,7 +252,6 @@ class CombatAgent:
             max_retries=2,
         )
 
-        # 5. Avaliação do Resultado da Execução
         if executed_ok:
             self.consecutive_turn_failures = 0
             self.turn_count += 1

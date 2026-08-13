@@ -158,12 +158,19 @@ class InputController:
         info = self.window_manager._current_target
         hwnd = info.hwnd if info else 0
         title = info.title if info else "Nenhuma"
+        can_dispatch = self.safety_guard.validate_can_dispatch(
+            is_window_confirmed=focused,
+            target_hwnd=hwnd,
+            target_pid=getattr(info, "pid", None),
+            target_title=title,
+            target_process=getattr(info, "process_name", None),
+        )
 
-        if not self.safety_guard.validate_can_dispatch(focused):
-            self.logger.warning(f"🛑 [SAFETY] INPUT_BLOCKED: Janela não confirmada ou parada de emergência ativa.")
+        if not can_dispatch:
+            self.logger.warning(f"🛑 [SAFETY] INPUT_BLOCKED: Janela não confirmada, própria aplicação detectada ou parada de emergência ativa.")
             self.event_bus.publish(
                 EventType.INPUT_BLOCKED,
-                data={"key": k, "reason": "Janela não confirmada ou Parada de Emergência"},
+                data={"key": k, "reason": "Janela não confirmada, própria aplicação ou Parada de Emergência"},
                 category="SAFETY",
                 level="WARNING",
                 message=f"Input bloqueado por segurança: {k.upper()}",
@@ -272,11 +279,21 @@ class InputController:
     def hold_keys(self, keys: List[str], duration: float = 0.2) -> bool:
         """Pressiona múltiplas teclas simultaneamente (ex: diagonais W+A)."""
         focused = self.focus_game_window()
-        if not self.safety_guard.validate_can_dispatch(focused):
-            return False
-
         info = self.window_manager._current_target
         target_hwnd = info.hwnd if info else None
+        target_pid = getattr(info, "pid", None) if info else None
+        target_title = getattr(info, "title", None) if info else None
+        target_process = getattr(info, "process_name", None) if info else None
+
+        if not self.safety_guard.validate_can_dispatch(
+            is_window_confirmed=focused,
+            target_hwnd=target_hwnd,
+            target_pid=target_pid,
+            target_title=target_title,
+            target_process=target_process,
+        ):
+            return False
+
         child_hwnds = getattr(info, "child_hwnds", []) if info else []
 
         pressed = []
@@ -307,7 +324,19 @@ class InputController:
     def click(self, x: int, y: int, jitter: bool = True) -> bool:
         """Clica na coordenada validando limites e foco."""
         focused = self.focus_game_window()
-        if not self.safety_guard.validate_can_dispatch(focused):
+        info = self.window_manager._current_target
+        target_hwnd = info.hwnd if info else None
+        target_pid = getattr(info, "pid", None) if info else None
+        target_title = getattr(info, "title", None) if info else None
+        target_process = getattr(info, "process_name", None) if info else None
+
+        if not self.safety_guard.validate_can_dispatch(
+            is_window_confirmed=focused,
+            target_hwnd=target_hwnd,
+            target_pid=target_pid,
+            target_title=target_title,
+            target_process=target_process,
+        ):
             return False
 
         screen_w, screen_h = pyautogui.size()

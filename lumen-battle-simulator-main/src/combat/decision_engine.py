@@ -4,13 +4,17 @@ from typing import Optional, List, Set, Dict, Any, Tuple
 
 from src.models.enums import Element, AgentState
 from src.models.lumen import BattleTelemetry, MoveSlotInfo, TeamStatus, LumenMemberState, ActionPlan, AtomicAction
+from src.models.combat_vision import CombatSnapshot, SkillSlot, EnemyTarget, CombatDecision, PositionInfo
 from src.core.elements import get_elemental_multiplier
 from src.core.codex import SPECIES_CATALOG
+from src.combat.positioning import CombatPositioningController
+
+logger = logging.getLogger("LumenaCombat")
 
 
 @dataclass
 class ActionDecision:
-    """Decisão estruturada e explicável gerada pelo motor de combate."""
+    """Decisão estruturada e explicável gerada pelo motor de combate legado."""
     action_type: str  # "MOVE", "SWITCH", "CONFIRM_VICTORY", "CLEAR_DEFEAT", "ADVANCE_DIALOG", "WAIT"
     target_slot: int  # Slot de golpe (0-3) ou slot de troca de criatura (0-5)
     target_name: str
@@ -21,17 +25,30 @@ class ActionDecision:
 
 
 class CombatDecisionEngine:
-    """Motor de decisão e ranking determinístico para combate inteligente em malha fechada."""
+    """Motor de decisão e ranking determinístico para combate inteligente em malha fechada.
+
+    Suporta N habilidades dinâmicas, controle tático de posicionamento e alcance, fraquezas elementais,
+    e estados de combate completos (NO_TARGET, SEARCH_TARGET, APPROACH_TARGET, MAINTAIN_DISTANCE, USE_SKILL, HEAL, REASSESS, VICTORY, DEFEAT).
+    """
 
     def __init__(self) -> None:
         self.logger = logging.getLogger("LumenaCombat")
+        self.positioning_ctrl = CombatPositioningController()
+        # Mapeamento de prioridades configuráveis de habilidades
+        self.priority_weights: Dict[str, float] = {
+            "ULTIMATE": 100.0,
+            "HIGH_DAMAGE": 70.0,
+            "CROWD_CONTROL": 60.0,
+            "NORMAL_ATTACK": 40.0,
+            "UTILITY": 30.0,
+            "MOVEMENT": 20.0,
+        }
         # Mapeamento rápido de espécies -> Elementos para inferência de fraqueza do inimigo
         self._species_element_cache: Dict[str, Tuple[Element, Optional[Element]]] = {}
         self._build_species_cache()
 
     def _build_species_cache(self) -> None:
         for entry in SPECIES_CATALOG:
-            # entry: (id, nome, tipo_1, tipo_2, ...)
             name = entry[1].lower()
             self._species_element_cache[name] = (entry[2], entry[3])
 
@@ -41,8 +58,165 @@ class CombatDecisionEngine:
             clean = enemy_name.lower().strip()
             if clean in self._species_element_cache:
                 return self._species_element_cache[clean]
-        # Padrão desconhecido: NORMAL
         return Element.NORMAL, None
+
+    def evaluate_combat_snapshot(
+        self,
+        snapshot: CombatSnapshot,
+        recent_failed_skills: Optional[Set[str]] = None,
+    ) -> CombatDecision:
+        """Avalia um CombatSnapshot dinâmico e seleciona a melhor ação/habilidade considerando posicionamento e alcance."""
+        failed_set = recent_failed_skills or set()
+
+        # 1. Vitória
+        if snapshot.victory_detected:
+            return CombatDecision(
+                action_type="CONFIRM_VICTORY",
+                target_pos=(960, 540),
+                reason="Inimigo derrotado. Confirmando vitória.",
+                score=1000.0,
+                confidence=1.0,
+            )
+
+        # 2. Derrota
+        if snapshot.defeat_detected:
+            return CombatDecision(
+                action_type="CLEAR_DEFEAT",
+                target_pos=(960, 540),
+                reason="Lumen desmaiou ou combate perdido. Reconhecendo tela.",
+                score=1000.0,
+                confidence=1.0,
+            )
+
+        # 3. Diálogo Ativo
+        if snapshot.dialog_active:
+            return CombatDecision(
+                action_type="ADVANCE_DIALOG",
+                target_pos=(960, 540),
+                reason="Caixa de diálogo ativa durante combate. Avançando texto.",
+                score=100.0,
+                confidence=0.9,
+            )
+
+        target = snapshot.target_enemy
+        target_elem = (target.element if target else Element.NORMAL) or Element.NORMAL
+        player_pos = snapshot.player_position or (960, 540)
+        target_pos = target.center if target else None
+
+        # 4. Avaliação de Habilidades Dinâmicas (Scoring Formula)
+        candidates: List[Tuple[SkillSlot, float, str]] = []
+
+        for skill in snapshot.available_skills:
+            # Pula habilidades indisponíveis ou em cooldown ativo
+            if not skill.available or skill.cooldown > 0 or skill.disabled:
+                continue
+
+            skill_id = skill.id or f"skill_slot_{skill.slot_index}"
+            score = float(skill.power)
+            reasons = [f"Poder Base: {skill.power}"]
+
+            # Multiplicador Elemental
+            elem = skill.element or Element.NORMAL
+            mult = get_elemental_multiplier(elem, target_elem)
+            score *= mult
+
+            if mult >= 2.0:
+                reasons.append(f"Super Efetivo ({mult:.1f}x) vs {target_elem.name}")
+                score += 50.0
+            elif mult <= 0.5:
+                reasons.append(f"Pouco Efetivo ({mult:.1f}x) vs {target_elem.name}")
+                score -= 30.0
+
+            # Prioridade e Tipo
+            if skill.range_type == "HEAL" and snapshot.player_hp <= 0.30:
+                score += 100.0
+                reasons.append("Cura Crítica Priorizada")
+            elif skill.range_type == "RANGED":
+                score += 15.0
+                reasons.append("Ataque Ranged")
+
+            # Finalização (Kill Shot)
+            if target and target.hp_estimate <= 0.35 and mult >= 1.0:
+                score += 30.0
+                reasons.append("Oportunidade de Nocaute")
+
+            # Penalidade por Falha Anterior na Mesma Ação
+            if skill_id in failed_set or str(skill.slot_index) in failed_set or skill.skill_name in failed_set:
+                score -= 60.0
+                reasons.append("Penalidade: Ação anterior falhou ou não produziu efeito visual")
+
+            candidates.append((skill, score, " | ".join(reasons)))
+
+        if candidates:
+            # Ordena e seleciona a melhor habilidade
+            candidates.sort(key=lambda c: c[1], reverse=True)
+            best_skill, best_score, best_reason = candidates[0]
+
+            # 5. Avaliação Tática de Posicionamento e Alcance (quando snapshot possui medição de posicionamento)
+            if target_pos and snapshot.position_info is not None:
+                pos_state, move_key, dist = self.positioning_ctrl.evaluate_positioning(
+                    player_pos, target_pos, best_skill
+                )
+
+                if pos_state == "APPROACH_TARGET":
+                    return CombatDecision(
+                        action_type="APPROACH_TARGET",
+                        selected_skill=best_skill,
+                        target_pos=target_pos,
+                        move_direction=move_key,
+                        reason=f"Alvo fora de alcance ({dist:.1f}px). Aproximando via '{move_key}'.",
+                        score=best_score + 10.0,
+                        confidence=0.90,
+                    )
+                elif pos_state == "MAINTAIN_DISTANCE":
+                    return CombatDecision(
+                        action_type="MAINTAIN_DISTANCE",
+                        selected_skill=best_skill,
+                        target_pos=target_pos,
+                        move_direction=move_key,
+                        reason=f"Muito próximo para ataque à distância ({dist:.1f}px). Recuando via '{move_key}'.",
+                        score=best_score + 5.0,
+                        confidence=0.85,
+                    )
+
+            # Posição pronta -> Usa a habilidade
+            return CombatDecision(
+                action_type="USE_SKILL",
+                selected_skill=best_skill,
+                target_pos=(best_skill.center_x, best_skill.center_y),
+                hotkey=best_skill.hotkey,
+                reason=best_reason,
+                score=best_score,
+                confidence=best_skill.confidence,
+            )
+
+        # Se não há habilidades prontas mas há botão FIGHT
+        if snapshot.fight_button_pos:
+            return CombatDecision(
+                action_type="OPEN_FIGHT_MENU",
+                target_pos=snapshot.fight_button_pos,
+                reason="Menu de habilidades fechado. Clicando em FIGHT para abrir opções.",
+                score=10.0,
+                confidence=0.8,
+            )
+
+        # Se nenhum alvo na cena
+        if not target and snapshot.in_battle:
+            return CombatDecision(
+                action_type="SEARCH_TARGET",
+                target_pos=(960, 540),
+                reason="Nenhum alvo focado na arena. Buscando oponente.",
+                score=5.0,
+                confidence=0.7,
+            )
+
+        return CombatDecision(
+            action_type="WAIT",
+            target_pos=(960, 540),
+            reason="Aguardando animação ou recarga de habilidades.",
+            score=0.0,
+            confidence=0.5,
+        )
 
     def evaluate_turn(
         self,
@@ -50,10 +224,9 @@ class CombatDecisionEngine:
         team: Optional[TeamStatus] = None,
         recent_failed_targets: Optional[Set[str]] = None,
     ) -> ActionDecision:
-        """Avalia o estado de combate atual e seleciona a ação de maior pontuação/sobrevivência."""
+        """Avalia o estado de combate legado e seleciona a ação de maior pontuação/sobrevivência."""
         failed_set = recent_failed_targets or set()
 
-        # 1. Tratamento de Vitória Concluída
         if telemetry.victory_detected:
             plan = ActionPlan(
                 actions=[
@@ -73,7 +246,6 @@ class CombatDecisionEngine:
                 action_plan=plan,
             )
 
-        # 2. Tratamento de Derrota
         if telemetry.defeat_detected:
             plan = ActionPlan(
                 actions=[
@@ -92,183 +264,99 @@ class CombatDecisionEngine:
                 action_plan=plan,
             )
 
-        # 3. Tratamento de Diálogo de Texto Ativo durante a Batalha
         if telemetry.dialog_active:
             plan = ActionPlan(
                 actions=[
                     AtomicAction(action_type="CLICK_CENTER", target="center", duration=0.15),
                 ],
-                description="Avançar diálogo de combate",
+                description="Avançar diálogo durante batalha",
             )
             return ActionDecision(
                 action_type="ADVANCE_DIALOG",
                 target_slot=-1,
-                target_name="CombatDialog",
+                target_name="DialogBox",
                 score=500.0,
-                reason="Diálogo ativo na tela de batalha. Avançando texto.",
-                confidence=0.9,
+                reason="Diálogo de combate ativo. Clicando no centro para avançar.",
+                confidence=1.0,
                 action_plan=plan,
             )
 
-        # 4. Avaliação de Sobrevivência e Troca de Criatura (SWITCH)
-        switch_decision = self._evaluate_team_switch(telemetry, team, failed_set)
-        if switch_decision is not None and switch_decision.score > 85.0:
-            return switch_decision
+        # Troca de Lumen se HP crítico
+        if team and (telemetry.player_hp_pct <= 0.25):
+            for member in team.members:
+                if member.slot != team.active_slot and member.hp_percentage > 0.40 and not member.is_fainted:
+                    plan = ActionPlan(
+                        actions=[
+                            AtomicAction(action_type="CLICK_SWITCH", target="switch_button", duration=0.2),
+                            AtomicAction(action_type="WAIT", target="wait", duration=0.3),
+                            AtomicAction(action_type="CLICK_LUMEN", target=f"slot_{member.slot}", duration=0.2),
+                        ],
+                        description=f"Trocar para {member.nickname} (HP {member.hp_percentage*100:.0f}%)",
+                    )
+                    return ActionDecision(
+                        action_type="SWITCH",
+                        target_slot=member.slot,
+                        target_name=member.nickname,
+                        score=200.0,
+                        reason=f"HP crítico do Lumen ativo ({telemetry.player_hp_pct*100:.0f}%). Troca de preservação para {member.nickname}.",
+                        confidence=0.95,
+                        action_plan=plan,
+                    )
 
-        # 5. Avaliação e Ranking dos 4 Slots de Ataque
-        move_decision = self._evaluate_moves(telemetry, team, failed_set)
-        if move_decision is not None:
-            # Se a melhor jogada for viável, retorna
-            if move_decision.score > 0:
-                return move_decision
-            # Se a melhor jogada for inviável (ex: sem PP) e houver opção de troca, prefere troca
-            if switch_decision is not None and switch_decision.score > 0:
-                return switch_decision
+        # Seleção de Golpes
+        best_move = self._rank_available_moves(telemetry, failed_set)
+        if best_move:
+            return best_move
 
-        # 6. Fallback de Segurança caso percepção esteja incompleta
         return self._generate_fallback_decision(telemetry)
 
-    def _evaluate_team_switch(
+    def _rank_available_moves(
         self,
         telemetry: BattleTelemetry,
-        team: Optional[TeamStatus],
         failed_set: Set[str],
     ) -> Optional[ActionDecision]:
-        """Avalia se a criatura ativa corre risco iminente de desmaio ou está sem PP para trocar de Lumen."""
-        if team is None or not team.members:
-            return None
-
-        active_slot = team.active_slot
-        active_member: Optional[LumenMemberState] = None
-        for m in team.members:
-            if m.slot == active_slot:
-                active_member = m
-                break
-
-        # Condição de perigo: HP próprio < 25% ou todos os golpes sem PP
-        is_hp_critical = telemetry.player_hp_pct < 0.25
-        is_pp_depleted = False
-        if telemetry.available_moves:
-            is_pp_depleted = all(m.current_pp <= 0 for m in telemetry.available_moves)
-
-        if not is_hp_critical and not is_pp_depleted:
-            return None
-
-        # Procura melhor substituto saudável
-        best_candidate: Optional[LumenMemberState] = None
-        best_candidate_hp = 0.0
-
-        for member in team.members:
-            if member.slot != active_slot and not member.is_fainted and member.hp_percentage > 0.40:
-                if member.hp_percentage > best_candidate_hp:
-                    target_id = f"switch_slot_{member.slot}"
-                    if target_id not in failed_set:
-                        best_candidate = member
-                        best_candidate_hp = member.hp_percentage
-
-        if best_candidate is not None:
-            score = 90.0 if is_hp_critical else 80.0
-            reason = (
-                f"HP crítico ({telemetry.player_hp_pct*100:.0f}%) ou PP esgotado. "
-                f"Trocando para {best_candidate.nickname} (HP {best_candidate.hp_percentage*100:.0f}%)."
-            )
-
-            # Ação de troca: Clica em SWITCH e depois no slot do parceiro
-            plan = ActionPlan(
-                actions=[
-                    AtomicAction(action_type="CLICK_SWITCH", target=f"switch_btn", duration=0.2),
-                    AtomicAction(action_type="WAIT", target="wait", duration=0.4),
-                    AtomicAction(action_type="CLICK_SLOT", target=f"team_slot_{best_candidate.slot}", duration=0.2),
-                    AtomicAction(action_type="WAIT", target="wait", duration=0.8),
-                ],
-                description=f"Trocar Lumen ativo para slot {best_candidate.slot} ({best_candidate.nickname})",
-            )
-
-            return ActionDecision(
-                action_type="SWITCH",
-                target_slot=best_candidate.slot,
-                target_name=best_candidate.nickname,
-                score=score,
-                reason=reason,
-                confidence=0.85,
-                action_plan=plan,
-            )
-
-        return None
-
-    def _evaluate_moves(
-        self,
-        telemetry: BattleTelemetry,
-        team: Optional[TeamStatus],
-        failed_set: Set[str],
-    ) -> Optional[ActionDecision]:
-        """Calcula o score de cada golpe disponível e retorna a melhor decisão."""
         if not telemetry.available_moves:
             return None
 
-        enemy_type1, enemy_type2 = self.infer_enemy_elements(telemetry.enemy_lumen_name)
+        enemy_elem_1, enemy_elem_2 = self.infer_enemy_elements(telemetry.enemy_lumen_name)
         candidates: List[ActionDecision] = []
 
         for move in telemetry.available_moves:
-            move_id = f"move_slot_{move.slot_index}"
-            score = 0.0
-            reason_parts = []
-
-            # 1. Checagem de PP (Inviável se PP == 0)
-            if move.current_pp <= 0 or not move.is_available:
-                score = -1000.0
-                reason_parts.append("Sem PP disponível")
-                candidates.append(
-                    ActionDecision(
-                        action_type="MOVE",
-                        target_slot=move.slot_index,
-                        target_name=move.name,
-                        score=score,
-                        reason="; ".join(reason_parts),
-                        confidence=0.95,
-                    )
-                )
+            if not move.is_available or move.current_pp <= 0:
                 continue
 
-            # 2. Dano Base
-            base_power = max(20, move.power)
-            score += base_power
-            reason_parts.append(f"Poder Base: {base_power}")
+            move_id = f"move_{move.slot_index}_{move.name}"
+            slot_id = f"move_slot_{move.slot_index}"
+            score = float(move.power)
+            reason_parts = [f"Poder: {move.power}"]
 
-            # 3. Multiplicador Elemental (Tabela de 18 tipos)
-            mult = get_elemental_multiplier(move.element, enemy_type1, enemy_type2)
+            mult_1 = get_elemental_multiplier(move.element, enemy_elem_1)
+            mult_2 = get_elemental_multiplier(move.element, enemy_elem_2) if enemy_elem_2 else 1.0
+            mult = mult_1 * mult_2
+            score *= mult
+
             if mult >= 2.0:
-                score += 45.0
-                reason_parts.append(f"Super Efetivo ({mult}x)")
-            elif mult == 0.0:
-                score = -500.0
-                reason_parts.append("Inimigo Imune (0.0x)")
+                score += 50.0
+                reason_parts.append(f"Super Efetivo ({mult:.1f}x) vs {enemy_elem_1.name}")
             elif mult <= 0.5:
                 score -= 30.0
-                reason_parts.append(f"Pouco Efetivo ({mult}x)")
+                reason_parts.append(f"Pouco Efetivo ({mult:.1f}x)")
             else:
                 reason_parts.append("Dano Neutro (1.0x)")
 
-            # 4. Oportunidade de Finalização (Kill Shot)
             if telemetry.enemy_hp_pct <= 0.35 and mult >= 1.0:
                 score += 30.0
                 reason_parts.append(f"Oportunidade de nocaute (HP Oponente {telemetry.enemy_hp_pct*100:.0f}%)")
 
-            # 5. Penalidade para Ações que Falharam Recentemente (Anti-Loop)
-            if move_id in failed_set:
+            if move_id in failed_set or slot_id in failed_set or f"slot_{move.slot_index}" in failed_set:
                 score -= 50.0
                 reason_parts.append("Penalidade por falha anterior na mesma ação")
 
-            # Monta ActionPlan concreto com FIGHT e clique no Slot
             plan = ActionPlan(
                 actions=[
                     AtomicAction(action_type="CLICK_FIGHT", target="fight_button", duration=0.2),
                     AtomicAction(action_type="WAIT", target="wait", duration=0.3),
-                    AtomicAction(
-                        action_type="CLICK_MOVE",
-                        target=f"slot_{move.slot_index}",
-                        duration=0.2,
-                    ),
+                    AtomicAction(action_type="CLICK_MOVE", target=f"slot_{move.slot_index}", duration=0.2),
                     AtomicAction(action_type="WAIT", target="wait", duration=1.0),
                 ],
                 description=f"Executar golpe {move.name} no Slot {move.slot_index}",
@@ -289,13 +377,9 @@ class CombatDecisionEngine:
         if not candidates:
             return None
 
-        # Retorna o candidato com maior pontuação
-        best = max(candidates, key=lambda c: c.score)
-        return best
+        return max(candidates, key=lambda c: c.score)
 
     def _generate_fallback_decision(self, telemetry: BattleTelemetry) -> ActionDecision:
-        """Gera ação de avanço seguro quando os slots de ataque ainda não estão visíveis ou percepção está incompleta."""
-        # Se posição do botão FIGHT estiver disponível, clica nele
         if telemetry.fight_button_pos is not None:
             plan = ActionPlan(
                 actions=[
@@ -314,7 +398,6 @@ class CombatDecisionEngine:
                 action_plan=plan,
             )
 
-        # Caso contrário, clica no centro para avançar animação
         plan = ActionPlan(
             actions=[
                 AtomicAction(action_type="CLICK_CENTER", target="center", duration=0.2),
