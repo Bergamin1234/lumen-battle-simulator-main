@@ -33,6 +33,14 @@ class KeyDiagnosticResult:
     movement_confirmed: bool
     success: bool
 
+    @property
+    def latency(self) -> float:
+        return self.duration
+
+    @property
+    def scan_code(self) -> int:
+        return self.scancode
+
 
 class InputController:
     """Controlador de entrada unificado, thread-safe, com proteção de Safety Guard e validação de feedback visual real."""

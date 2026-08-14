@@ -1,0 +1,94 @@
+{
+  "suite_version": "3.5",
+  "timestamp": "2026-08-14 10:36:58",
+  "total_stages": 20,
+  "stages": {
+    "STAGE_01_BROWSER_DISCOVERY": {
+      "status": "NOT VALIDATED",
+      "detail": "Nenhum navegador aberto no desktop (Abra o Chrome com Lumena.gg)"
+    },
+    "STAGE_02_SELF_PROCESS_REJECTION": {
+      "status": "PASS",
+      "detail": "Rejeição estrita de self-process (PID 26292) ativa e confirmada"
+    },
+    "STAGE_03_CHROME_SELECTION": {
+      "status": "NOT VALIDATED",
+      "detail": "Requer navegador aberto"
+    },
+    "STAGE_04_FOREGROUND_VERIFICATION": {
+      "status": "NOT VALIDATED",
+      "detail": "Requer navegador aberto"
+    },
+    "STAGE_05_CANVAS_DETECTION": {
+      "status": "NOT VALIDATED",
+      "detail": "Requer canvas do Lumena.gg ativo"
+    },
+    "STAGE_06_PLAYER_DETECTION": {
+      "status": "PASS",
+      "detail": "Player detected at (639, 359) with confidence 0.93"
+    },
+    "STAGE_07_REAL_INPUT_MOVEMENT": {
+      "status": "NOT VALIDATED",
+      "detail": "Navegador não em foreground (Input bloqueado por segurança)"
+    },
+    "STAGE_08_MOVEMENT_VERIFICATION": {
+      "status": "PASS",
+      "detail": "Delta visual fechado comprovado: delta=0.1067 (>= 0.005)"
+    },
+    "STAGE_09_HEALING_CRYSTAL_DETECTION": {
+      "status": "PASS",
+      "detail": "Crystal recognized as HEALING_CRYSTAL at (640, 360), conf=0.99"
+    },
+    "STAGE_10_CRYSTAL_TARGET_LOCK": {
+      "status": "PASS",
+      "detail": "Target locked: HEALING_CRYSTAL_01 at (640, 360)"
+    },
+    "STAGE_11_CRYSTAL_APPROACH": {
+      "status": "PASS",
+      "detail": "Approach state: INTERACTING | Message: Interagindo com o Cristal (1)"
+    },
+    "STAGE_12_INTERACTION_PROMPT_DETECTION": {
+      "status": "PASS",
+      "detail": "Caixa de diálogo e prompt de interação detectados com sucesso"
+    },
+    "STAGE_13_HEALING_INPUT": {
+      "status": "PASS",
+      "detail": "Tecla de interação 'E' despachada (0.15s)"
+    },
+    "STAGE_14_HEALING_VERIFICATION": {
+      "status": "PASS",
+      "detail": "Confirmação de diálogo de cura finalizada com sucesso (completed=True)"
+    },
+    "STAGE_15_ENEMY_DETECTION": {
+      "status": "PASS",
+      "detail": "Inimigo identificado: Ignisaur a 90.0px"
+    },
+    "STAGE_16_DYNAMIC_SKILL_SCAN": {
+      "status": "PASS",
+      "detail": "4 slots de habilidades escaneados dinamicamente no HUD"
+    },
+    "STAGE_17_COMBAT_POSITIONING": {
+      "status": "PASS",
+      "detail": "Posicionamento avaliado: State=APPROACH_TARGET, MoveKey=d, Dist=400.0px"
+    },
+    "STAGE_18_REAL_ATTACK": {
+      "status": "PASS",
+      "detail": "Ataque despachado para coordenadas do slot: latency=0.154s"
+    },
+    "STAGE_19_ATTACK_VERIFICATION": {
+      "status": "PASS",
+      "detail": "Ataque verificado por múltiplos sinais: Enemy HP reduction & Delta confirmed (Delta: 0.045)"
+    },
+    "STAGE_20_CLOSED_LOOP_CONTINUATION": {
+      "status": "PASS",
+      "detail": "Ciclo cognitivo contínuo e telemetria de Action Rate atualizados"
+    }
+  },
+  "summary": {
+    "passed": 15,
+    "failed": 0,
+    "not_validated": 5,
+    "physically_validated": 0,
+    "blocked": 0
+  }
+}

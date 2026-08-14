@@ -38,6 +38,11 @@ class TargetWindowInfo:
         """Alias de compatibilidade com WindowInfo."""
         return self.is_foreground
 
+    @property
+    def executable_name(self) -> str:
+        """Retorna o nome do executável da janela."""
+        return self.process_name or (self.executable_path.split("\\")[-1] if self.executable_path else "")
+
 
 @dataclass
 class SkillSlot:

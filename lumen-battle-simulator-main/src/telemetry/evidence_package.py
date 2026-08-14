@@ -89,12 +89,14 @@ def save_evidence_package(
     )
 
     result_payload = {
+        "action_requested": True,
+        "input_dispatched": bool(input_dispatched),
+        "action_verified": bool(action_verified),
+        "physically_validated": bool(physical_verified),
         "target_window_verified": bool(target_window_verified),
         "foreground_verified": bool(foreground_verified),
-        "input_dispatched": bool(input_dispatched),
         "visual_change_detected": bool(visual_change),
         "visual_delta": round(float(visual_delta), 4),
-        "action_verified": bool(action_verified),
         "physical_execution_verified": bool(physical_verified),
         "target_type": str(target_type),
         "target_confidence": round(float(target_confidence), 2),

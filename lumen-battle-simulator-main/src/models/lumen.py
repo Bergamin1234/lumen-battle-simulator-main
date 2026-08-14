@@ -208,6 +208,48 @@ class PlayerInfo:
     bounding_box: tuple[int, int, int, int] = (0, 0, 0, 0)
     confidence: float = 1.0
     detected: bool = False
+    detection_method: str = "HEURISTIC"
+
+    @property
+    def bbox(self) -> tuple[int, int, int, int]:
+        return self.bounding_box
+
+    @property
+    def center_x(self) -> int:
+        return self.center[0] if self.center else self.x
+
+    @property
+    def center_y(self) -> int:
+        return self.center[1] if self.center else self.y
+
+
+@dataclass
+class PlayerDetection:
+    bbox: tuple[int, int, int, int] = (0, 0, 0, 0)
+    center_x: int = 0
+    center_y: int = 0
+    confidence: float = 1.0
+    detection_method: str = "HEURISTIC"
+    detected: bool = True
+
+    @property
+    def center(self) -> tuple[int, int]:
+        return (self.center_x, self.center_y)
+
+
+@dataclass
+class CrystalDetection:
+    bbox: tuple[int, int, int, int] = (0, 0, 0, 0)
+    center_x: int = 0
+    center_y: int = 0
+    confidence: float = 1.0
+    semantic_type: str = "HEALING_CRYSTAL"
+    distance_to_player: float = 0.0
+    detected: bool = True
+
+    @property
+    def center(self) -> tuple[int, int]:
+        return (self.center_x, self.center_y)
 
 
 @dataclass
