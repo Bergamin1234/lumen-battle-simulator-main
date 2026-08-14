@@ -20,15 +20,86 @@ class LandmarkDetector:
         self.crystal_upper = crystal_hsv_upper if crystal_hsv_upper is not None else np.array([135, 255, 255])
         self.templates = templates or {}
 
+    def detect_player(
+        self,
+        frame: Optional[np.ndarray],
+    ) -> Tuple[bool, Tuple[int, int, int, int], Tuple[int, int], float]:
+        """
+        Detecta o personagem do jogador no mapa (Overworld / Batalha).
+        Retorna (player_found, bounding_box, center_coords, confidence).
+        """
+        if frame is None or frame.size == 0:
+            return False, (0, 0, 0, 0), (0, 0), 0.0
+
+        try:
+            h, w = frame.shape[:2]
+            center_x, center_y = w // 2, h // 2
+
+            # 1. Template matching se disponível
+            if "player.png" in self.templates:
+                tmpl = self.templates["player.png"]
+                th, tw = tmpl.shape[:2]
+                if th <= h and tw <= w:
+                    res = cv2.matchTemplate(frame, tmpl, cv2.TM_CCOEFF_NORMED)
+                    _, max_val, _, max_loc = cv2.minMaxLoc(res)
+                    if max_val >= 0.65:
+                        bx, by = max_loc
+                        cx = bx + tw // 2
+                        cy = by + th // 2
+                        return True, (bx, by, tw, th), (cx, cy), float(max_val)
+
+            # 2. Heurística visual: busca por entidade no quadrante central
+            roi_top = max(0, int(h * 0.35))
+            roi_bottom = min(h, int(h * 0.68))
+            roi_left = max(0, int(w * 0.35))
+            roi_right = min(w, int(w * 0.68))
+
+            roi = frame[roi_top:roi_bottom, roi_left:roi_right]
+            if roi.size > 0:
+                gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+                edges = cv2.Canny(gray, 40, 140)
+                contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+                valid_player_candidates = []
+                for cnt in contours:
+                    area = cv2.contourArea(cnt)
+                    if 60 <= area <= 6000:
+                        x, y, bw, bh = cv2.boundingRect(cnt)
+                        aspect = bh / max(1, bw)
+                        if 0.6 <= aspect <= 3.0:
+                            abs_x = roi_left + x
+                            abs_y = roi_top + y
+                            cx = abs_x + bw // 2
+                            cy = abs_y + bh // 2
+                            dist_center = np.hypot(cx - center_x, cy - center_y)
+                            score = 1.0 / (1.0 + dist_center * 0.05)
+                            valid_player_candidates.append((score, (abs_x, abs_y, bw, bh), (cx, cy)))
+
+                if valid_player_candidates:
+                    best_score, best_bbox, best_center = max(valid_player_candidates, key=lambda item: item[0])
+                    conf = min(0.98, max(0.70, best_score))
+                    return True, best_bbox, best_center, conf
+
+            # 3. Fallback estável: centro da viewport com dimensões padrão de sprite
+            sprite_w, sprite_h = 36, 52
+            bbox = (center_x - sprite_w // 2, center_y - sprite_h // 2, sprite_w, sprite_h)
+            return True, bbox, (center_x, center_y), 0.80
+
+        except Exception as e:
+            self.logger.debug(f"Erro tolerado em detect_player: {e}")
+            h, w = (frame.shape[:2]) if frame is not None else (1080, 1920)
+            return True, (w // 2 - 16, h // 2 - 24, 32, 48), (w // 2, h // 2), 0.70
+
     def detect_crystal(
         self,
         frame: Optional[np.ndarray],
+        player_pos: Optional[Tuple[int, int]] = None,
     ) -> Tuple[bool, Optional[Tuple[int, int]], Optional[UIElement]]:
         """
         Detecta o Grande Cristal Azul de Cura no cenário de forma semântica e estável.
         Retorna:
         - crystal_detected: bool
-        - relative_vector: (dx, dy) relativo ao centro da tela / jogador (onde dx > 0 = direita, dy > 0 = abaixo)
+        - relative_vector: (dx, dy) relativo à posição do jogador
         - ui_element: UIElement com semantic_type='HEALING_CRYSTAL', bounding box e confiança
         """
         if frame is None or frame.size == 0:
@@ -36,7 +107,12 @@ class LandmarkDetector:
 
         try:
             h, w = frame.shape[:2]
-            center_x, center_y = w // 2, h // 2
+            # Se a posição do jogador não foi passada, detecta ou usa o centro da tela
+            if player_pos is None:
+                _, _, p_center, _ = self.detect_player(frame)
+                ref_x, ref_y = p_center
+            else:
+                ref_x, ref_y = player_pos
 
             # 1. Busca por template se disponível
             if "blue_crystal.png" in self.templates:
@@ -56,7 +132,7 @@ class LandmarkDetector:
                             center=(cx, cy),
                             semantic_type="HEALING_CRYSTAL",
                         )
-                        return True, (cx - center_x, cy - center_y), elem
+                        return True, (cx - ref_x, cy - ref_y), elem
 
             # 2. Segmentação HSV do Cristal Azul / Ciano Luminoso
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -100,8 +176,8 @@ class LandmarkDetector:
                     center=best_center,
                     semantic_type="HEALING_CRYSTAL",
                 )
-                dx = best_center[0] - center_x
-                dy = best_center[1] - center_y
+                dx = best_center[0] - ref_x
+                dy = best_center[1] - ref_y
                 return True, (dx, dy), elem
 
         except Exception as e:

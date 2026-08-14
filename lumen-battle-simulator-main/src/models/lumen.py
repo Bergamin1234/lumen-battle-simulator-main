@@ -201,6 +201,29 @@ class BattleTelemetry:
 
 
 @dataclass
+class PlayerInfo:
+    x: int = 0
+    y: int = 0
+    center: tuple[int, int] = (0, 0)
+    bounding_box: tuple[int, int, int, int] = (0, 0, 0, 0)
+    confidence: float = 1.0
+    detected: bool = False
+
+
+@dataclass
+class TargetLockInfo:
+    target_id: str
+    semantic_type: str = "HEALING_CRYSTAL"
+    confidence: float = 0.0
+    bounding_box: tuple[int, int, int, int] = (0, 0, 0, 0)
+    center_x: int = 0
+    center_y: int = 0
+    distance: float = 0.0
+    timestamp: float = 0.0
+    locked: bool = True
+
+
+@dataclass
 class StateSnapshot:
     timestamp: float
     screen_state: AgentState
@@ -210,6 +233,8 @@ class StateSnapshot:
     crystal_relative_pos: Optional[tuple[int, int]] = None  # Vector (dx, dy)
     grass_density: float = 0.0
     motion_energy: float = 0.0  # Delta do frame anterior
+    player_info: Optional[PlayerInfo] = None
+    target_lock: Optional[TargetLockInfo] = None
 
 
 @dataclass
@@ -234,3 +259,16 @@ class TeamStatus:
     total_usable_pp: int = 0
     team_alive_count: int = 0
     requires_immediate_heal: bool = False
+
+
+@dataclass
+class ActionVerificationResult:
+    input_dispatched: bool = False
+    visual_delta: float = 0.0
+    player_changed: bool = False
+    enemy_changed: bool = False
+    cooldown_changed: bool = False
+    state_changed: bool = False
+    verified: bool = False
+    confidence: float = 0.0
+    reason: str = ""

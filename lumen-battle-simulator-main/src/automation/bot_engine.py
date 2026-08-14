@@ -74,25 +74,36 @@ class LumenaBotEngine:
         self._last_state_snapshot: Optional[StateSnapshot] = None
         self._latest_annotated_frame = None
 
-        # Execution Health & Watchdog Tracker
+        # Execution Health & Watchdog Tracker (Real Execution Panel - Regras #18 e #19)
         self._last_physical_action_time = time.time()
         self._stalled_warning_emitted = False
         self.health_monitor: Dict[str, Any] = {
+            "state": "STOPPED",
+            "target": "NONE",
+            "target_type": "NONE",
+            "target_confidence": 0.0,
+            "player_pos": (0, 0),
+            "target_pos": (0, 0),
+            "distance": 0.0,
+            "decision": "NONE",
+            "input": "NONE",
+            "window": "NONE",
+            "foreground": False,
+            "canvas": False,
+            "input_dispatched": False,
+            "visual_delta": 0.0,
+            "action_result": "NONE",
+            "last_action": "NONE",
+            "time_since_last_action": 0.0,
+            # Legacy aliases
             "perception": True,
-            "target": True,
-            "positioning": True,
-            "focus": True,
-            "input": True,
             "action": True,
             "verification": True,
             "current_goal": "IDLE",
             "current_target": "NONE",
-            "target_confidence": 0.0,
-            "last_action": "NONE",
             "last_input": "NONE",
             "last_verified_action": "NONE",
             "last_block_reason": "NONE",
-            "visual_delta": 0.0,
         }
 
         # Anti-Stuck & Recovery Tracker
@@ -232,6 +243,7 @@ class LumenaBotEngine:
     def _execute_single_cycle(self) -> None:
         """Executa um passo fechado: Captura ➔ Percepção ➔ Memória ➔ Decisão ➔ Ação ➔ Observação."""
         # 1. OBSERVE: Captura de Tela
+        self.telemetry.record_observation()
         frame, timestamp = self.screen_capture.capture_frame()
 
         if frame is None:
@@ -245,13 +257,25 @@ class LumenaBotEngine:
         confidence = 0.9 if snapshot.screen_state != AgentState.UNKNOWN_STATE else 0.2
         self.telemetry.update_perception_confidence(confidence)
 
+        # Atualiza métricas de monitoramento em tempo real (Regra #18)
+        target_info = self.input_ctrl.window_manager._current_target
+        fg_hwnd = self.input_ctrl.window_manager.user32.GetForegroundWindow() if hasattr(self.input_ctrl.window_manager, "user32") else 0
+        is_fg = bool(target_info and target_info.hwnd == fg_hwnd)
+        self.health_monitor["window"] = target_info.title if target_info else "NONE"
+        self.health_monitor["foreground"] = is_fg
+        self.health_monitor["canvas"] = bool(target_info and target_info.canvas_detected)
+        self.health_monitor["time_since_last_action"] = round(time.time() - self._last_physical_action_time, 1)
+
+        if snapshot.player_info and snapshot.player_info.detected:
+            self.health_monitor["player_pos"] = snapshot.player_info.center
+
         # Gera frame anotado para a página Vision da GUI
         self._latest_annotated_frame = self._generate_annotated_frame(frame, snapshot)
 
         # 3. MEMORY: Atualização da Memória Operacional
         self.memory_manager.update_from_snapshot(snapshot)
 
-        # Watchdog: Verifica se o bot está travado apenas observando sem ação física
+        # Watchdog: Verifica se o bot está travado apenas observando sem ação física (> 15s)
         if self._running and not self._paused:
             if time.time() - self._last_physical_action_time > 15.0:
                 if not self._stalled_warning_emitted:
@@ -267,8 +291,9 @@ class LumenaBotEngine:
                     self._stalled_warning_emitted = True
                     self.input_ctrl.focus_game_window()
 
-        # 4. DECIDE & ACT: Máquina de Estados e Despacho
+        # 4. DECIDE & ACT: Hierarquia Estrita de Objetivos e Máquina de Estados
         bt = snapshot.battle_telemetry
+        team_needs_heal = self.memory_manager.team_status.requires_immediate_heal if hasattr(self.memory_manager, "team_status") and self.memory_manager.team_status else False
 
         if bt and bt.victory_detected:
             self.fsm.transition_to(BotState.VICTORY, reason="Tela de Vitória Detectada")
@@ -285,29 +310,46 @@ class LumenaBotEngine:
         elif snapshot.screen_state in (AgentState.BATTLE, AgentState.BATTLE_DETECTED) or (bt and bt.in_battle):
             self.health_monitor["current_goal"] = "COMBAT"
             self.health_monitor["current_target"] = "ENEMY"
+            self.health_monitor["target_type"] = "ENEMY"
+            self.health_monitor["state"] = "BATTLE"
             self.fsm.transition_to(BotState.BATTLE, reason="Interface de Batalha Ativa")
             self.event_bus.publish(EventType.BATTLE_STARTED, category="COMBAT", level="INFO", message="Combate iniciado contra inimigo")
             self._handle_battle_cycle(snapshot, frame)
 
-        elif snapshot.screen_state in (AgentState.HEALING, AgentState.SEARCHING_CRYSTAL) or snapshot.crystal_detected:
+        elif team_needs_heal or snapshot.screen_state in (AgentState.HEALING, AgentState.SEARCHING_CRYSTAL) or snapshot.crystal_detected:
+            # Hierarquia de Objetivos: Cristal de Cura tem prioridade máxima quando necessário
             self.health_monitor["current_goal"] = "HEAL"
             self.health_monitor["current_target"] = "HEALING_CRYSTAL"
-            self.health_monitor["target_confidence"] = snapshot.ui_elements.get("blue_crystal").confidence if "blue_crystal" in snapshot.ui_elements else 0.85
+            self.health_monitor["target_type"] = "HEALING_CRYSTAL"
+            self.health_monitor["state"] = "HEALING"
+            crystal = snapshot.ui_elements.get("blue_crystal")
+            if crystal:
+                self.health_monitor["target_confidence"] = crystal.confidence
+                self.health_monitor["target_pos"] = crystal.center
+                if snapshot.crystal_relative_pos:
+                    self.health_monitor["distance"] = round(math.hypot(*snapshot.crystal_relative_pos), 1)
+            else:
+                self.health_monitor["target_confidence"] = 0.50
+
             self.fsm.transition_to(BotState.HEALING, reason="Ponto de Cura / Cristal Ativo")
             self._handle_healing_cycle(snapshot, frame)
 
         elif bt and bt.dialog_active:
             self.health_monitor["current_goal"] = "ADVANCE_DIALOG"
+            self.health_monitor["state"] = "DIALOG"
             self.fsm.transition_to(BotState.DIALOG, reason="Caixa de Diálogo Detectada")
             self._handle_dialog_cycle(snapshot)
 
         elif snapshot.screen_state in (AgentState.EXPLORING, AgentState.SEARCHING_FARM):
             self.health_monitor["current_goal"] = "EXPLORE"
             self.health_monitor["current_target"] = "NONE"
+            self.health_monitor["target_type"] = "NONE"
+            self.health_monitor["state"] = "EXPLORING"
             self.fsm.transition_to(BotState.EXPLORING, reason="Mundo Aberto Ativo")
             self._handle_overworld_cycle(snapshot, frame)
 
         else:
+            self.health_monitor["state"] = "OBSERVING"
             self.fsm.transition_to(BotState.OBSERVING, reason="Observando Estado Desconhecido")
             self.telemetry.update_agent_status(
                 state="OBSERVING",
@@ -359,6 +401,7 @@ class LumenaBotEngine:
                 message=f"Ação de combate: {getattr(d, 'action_type', 'ACTION')} (Score: {getattr(d, 'score', 0.0):.1f})",
             )
 
+        self.telemetry.record_combat_action()
         self.telemetry.record_action(
             turn_res.executed_successfully,
             latency=t1 - t0,
@@ -387,6 +430,7 @@ class LumenaBotEngine:
 
         dir_key = "w"
         t0 = time.time()
+        self.telemetry.record_movement_action()
         diag = self.input_ctrl.press_key_with_diagnostic(dir_key, duration=0.25)
         t1 = time.time()
 
@@ -420,6 +464,7 @@ class LumenaBotEngine:
         if not hasattr(self, "_recovery_attempts"):
             self._recovery_attempts = 0
 
+        self.telemetry.record_recovery_attempt()
         self._recovery_attempts += 1
         if self._recovery_attempts > 3:
             self.logger.critical(f"🛑 [ANTI-STUCK] Limite de 3 tentativas de recuperação atingido. Acionando Safe Stop.")
@@ -462,15 +507,26 @@ class LumenaBotEngine:
 
     def _handle_healing_cycle(self, snapshot: StateSnapshot, frame: Optional[np.ndarray] = None) -> None:
         """Processa recuperação de vida e PP no ponto de cura com aproximação tática e interação em malha fechada."""
-        h_state, is_done, msg = self.healing_controller.step(snapshot, frame)
+        self.telemetry.record_healing_action()
+        h_state, is_done, msg = self.healing_controller.step(
+            snapshot,
+            frame=frame,
+            screen_capture_func=self.screen_capture.capture_frame,
+        )
         self.health_monitor["last_action"] = h_state
         self.health_monitor["current_goal"] = "HEAL"
         self.health_monitor["current_target"] = "HEALING_CRYSTAL"
+        self.health_monitor["target_type"] = "HEALING_CRYSTAL"
+        self.health_monitor["decision"] = msg
+        self.health_monitor["visual_delta"] = self.healing_controller.last_delta
+        self.health_monitor["action_result"] = "VERIFIED" if self.healing_controller.movement_verified or is_done else "UNCONFIRMED"
 
         if h_state in ("APPROACH_TARGET", "INTERACTING", "INTERACT_READY"):
             self._last_physical_action_time = time.time()
             self._stalled_warning_emitted = False
             self.health_monitor["action"] = True
+            self.health_monitor["input_dispatched"] = True
+            self.health_monitor["input"] = self.healing_controller.last_move_key or "SPACE"
             self.health_monitor["last_input"] = self.healing_controller.last_move_key or "SPACE"
 
         self.telemetry.update_agent_status(
@@ -482,6 +538,7 @@ class LumenaBotEngine:
 
         if is_done:
             self.health_monitor["verification"] = True
+            self.health_monitor["action_result"] = "VERIFIED"
             self.health_monitor["last_verified_action"] = "HEALING_VERIFIED"
             self.fsm.transition_to(BotState.EXPLORING, reason="Cura concluída no Cristal")
 

@@ -1,0 +1,91 @@
+{
+  "timestamp": "2026-08-14 09:52:02",
+  "total_tests": 19,
+  "tests": {
+    "TEST_01_TARGET_WINDOW": {
+      "status": "NOT VALIDATED",
+      "detail": "Nenhum navegador aberto"
+    },
+    "TEST_02_WINDOW_FOCUS": {
+      "status": "NOT VALIDATED",
+      "detail": "Requer navegador aberto"
+    },
+    "TEST_03_CANVAS_FOCUS": {
+      "status": "NOT VALIDATED",
+      "detail": "Requer canvas do Lumena.gg"
+    },
+    "TEST_04_MOVE_W": {
+      "status": "NOT VALIDATED",
+      "detail": "Navegador não em foreground"
+    },
+    "TEST_05_MOVE_S": {
+      "status": "NOT VALIDATED",
+      "detail": "Navegador não em foreground"
+    },
+    "TEST_06_MOVE_A": {
+      "status": "NOT VALIDATED",
+      "detail": "Navegador não em foreground"
+    },
+    "TEST_07_MOVE_D": {
+      "status": "NOT VALIDATED",
+      "detail": "Navegador não em foreground"
+    },
+    "TEST_08_PLAYER_DETECTION": {
+      "status": "AUTOMATED TESTED (PASS)",
+      "detail": "Player detected=True, center=(639, 359), bbox=(619, 339, 41, 41), conf=0.93"
+    },
+    "TEST_09_CRYSTAL_DETECTION": {
+      "status": "AUTOMATED TESTED (PASS)",
+      "detail": "Crystal detected=True, center=(640, 360), vector=(1, 1), conf=0.99"
+    },
+    "TEST_10_APPROACH_CRYSTAL": {
+      "status": "AUTOMATED TESTED (PASS)",
+      "detail": "State=INTERACTING, Message='Interagindo com o Cristal (1)', DominantKey='None'"
+    },
+    "TEST_11_HEALING_INTERACTION": {
+      "status": "AUTOMATED TESTED (PASS)",
+      "detail": "FinalState=HEALING_VERIFIED, Completed=True"
+    },
+    "TEST_12_SKILL_DETECTION": {
+      "status": "AUTOMATED TESTED (PASS)",
+      "detail": "Detected 4 dynamic skill slots in HUD"
+    },
+    "TEST_13_ENEMY_DETECTION": {
+      "status": "AUTOMATED TESTED (PASS)",
+      "detail": "Target ID=1, Name=Wild_Lumen, Distance=85.0px"
+    },
+    "TEST_14_COMBAT_POSITIONING": {
+      "status": "AUTOMATED TESTED (PASS)",
+      "detail": "State=APPROACH_TARGET, MoveKey=d, Distance=400.0px"
+    },
+    "TEST_15_SKILL_EXECUTION": {
+      "status": "AUTOMATED TESTED (PASS)",
+      "detail": "Executed=True, Latency=0.151s"
+    },
+    "TEST_16_ACTION_VERIFICATION": {
+      "status": "AUTOMATED TESTED (PASS)",
+      "detail": "Verified=True, Delta=0.1255"
+    },
+    "TEST_17_RECOVERY_ANTI_STUCK": {
+      "status": "AUTOMATED TESTED (PASS)",
+      "detail": "Jiggle WASD & Recovery attempt limit 3 validated"
+    },
+    "TEST_18_WATCHDOG": {
+      "status": "AUTOMATED TESTED (PASS)",
+      "detail": "Watchdog timeout > 15s triggers EXECUTION_STALLED correctly"
+    },
+    "TEST_19_SAFE_STOP": {
+      "status": "AUTOMATED TESTED (PASS)",
+      "detail": "Emergency stop signal published to EventBus successfully"
+    }
+  },
+  "summary": {
+    "passed": 12,
+    "failed": 0,
+    "not_validated": 7,
+    "physically_validated": 0,
+    "action_unconfirmed": 0,
+    "execution_stalled": 0,
+    "safe_stop": 0
+  }
+}

@@ -656,45 +656,78 @@ class ModernLumenaGUI:
 
         tk.Label(card, text="🩺 DIAGNOSTICS CENTER & REAL EXECUTION HEALTH", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(anchor="w", pady=(0, 8))
 
-        # REAL EXECUTION MONITOR PANEL
+        # REAL EXECUTION MONITOR PANEL (Regra #18 & #19)
         mon_frame = tk.Frame(card, bg=THEME["bg_dark"], padx=12, pady=10, highlightthickness=1, highlightbackground=THEME["border"])
         mon_frame.pack(fill="x", pady=(0, 10))
 
-        tk.Label(mon_frame, text="⚡ REAL EXECUTION HEALTH MONITOR", bg=THEME["bg_dark"], fg=THEME["text_primary"], font=(THEME["font_family"], 9, "bold")).pack(anchor="w", pady=(0, 6))
+        tk.Label(mon_frame, text="⚡ REAL EXECUTION MONITOR (CLOSED-LOOP ENGINE)", bg=THEME["bg_dark"], fg=THEME["text_primary"], font=(THEME["font_family"], 9, "bold")).pack(anchor="w", pady=(0, 6))
 
-        grid_frame = tk.Frame(mon_frame, bg=THEME["bg_dark"])
-        grid_frame.pack(fill="x", pady=4)
-
-        self.exec_health_labels = {}
-        health_keys = ["Perception", "Target", "Positioning", "Focus", "Input", "Action", "Verification"]
-        for k in health_keys:
-            col = tk.Frame(grid_frame, bg=THEME["bg_card"], padx=8, pady=4, highlightthickness=1, highlightbackground=THEME["border"])
-            col.pack(side="left", fill="both", expand=True, padx=2)
-            tk.Label(col, text=k.upper(), bg=THEME["bg_card"], fg=THEME["text_muted"], font=(THEME["font_family"], 7, "bold")).pack()
-            lbl = tk.Label(col, text="● PASS", bg=THEME["bg_card"], fg=THEME["status_active"], font=(THEME["font_family"], 9, "bold"))
-            lbl.pack()
-            self.exec_health_labels[k.lower()] = lbl
-
-        status_grid = tk.Frame(mon_frame, bg=THEME["bg_dark"])
-        status_grid.pack(fill="x", pady=(8, 2))
-
+        # Status Grid 1: Core Target & Navigation Fields
+        grid1 = tk.Frame(mon_frame, bg=THEME["bg_dark"])
+        grid1.pack(fill="x", pady=2)
+        
         self.exec_monitor_vars = {}
-        vars_def = [
-            ("CURRENT GOAL", "exec_goal", "IDLE"),
-            ("CURRENT TARGET", "exec_target", "NONE"),
+        row1_vars = [
+            ("STATE", "exec_state", "STOPPED"),
+            ("TARGET", "exec_target", "NONE"),
+            ("TARGET TYPE", "exec_target_type", "NONE"),
             ("CONFIDENCE", "exec_conf", "0.00"),
-            ("LAST ACTION", "exec_action", "NONE"),
-            ("LAST INPUT", "exec_input", "NONE"),
-            ("LAST VERIFIED", "exec_verified", "NONE"),
-            ("VISUAL DELTA", "exec_delta", "0.0000"),
+            ("PLAYER POS", "exec_player_pos", "(0, 0)"),
+            ("TARGET POS", "exec_target_pos", "(0, 0)"),
+            ("DISTANCE", "exec_dist", "0.0 px"),
         ]
-        for title, key, val in vars_def:
-            box = tk.Frame(status_grid, bg=THEME["bg_card"], padx=6, pady=4)
+        for title, key, val in row1_vars:
+            box = tk.Frame(grid1, bg=THEME["bg_card"], padx=6, pady=4)
             box.pack(side="left", fill="both", expand=True, padx=2)
             tk.Label(box, text=title, bg=THEME["bg_card"], fg=THEME["text_muted"], font=(THEME["font_family"], 7)).pack(anchor="w")
             lbl = tk.Label(box, text=val, bg=THEME["bg_card"], fg="#38BDF8", font=("Consolas", 8, "bold"))
             lbl.pack(anchor="w")
             self.exec_monitor_vars[key] = lbl
+
+        # Status Grid 2: Execution, Win32 & Verification Fields
+        grid2 = tk.Frame(mon_frame, bg=THEME["bg_dark"])
+        grid2.pack(fill="x", pady=2)
+
+        row2_vars = [
+            ("DECISION", "exec_decision", "NONE"),
+            ("INPUT", "exec_input", "NONE"),
+            ("WINDOW", "exec_window", "NONE"),
+            ("FOREGROUND", "exec_fg", "FALSE"),
+            ("CANVAS", "exec_canvas", "FALSE"),
+            ("DISPATCH", "exec_dispatch", "NO"),
+            ("VISUAL DELTA", "exec_delta", "0.0000"),
+            ("ACTION RESULT", "exec_result", "NONE"),
+            ("LAST ACTION", "exec_action", "NONE"),
+            ("ELAPSED", "exec_elapsed", "0.0s"),
+        ]
+        for title, key, val in row2_vars:
+            box = tk.Frame(grid2, bg=THEME["bg_card"], padx=6, pady=4)
+            box.pack(side="left", fill="both", expand=True, padx=2)
+            tk.Label(box, text=title, bg=THEME["bg_card"], fg=THEME["text_muted"], font=(THEME["font_family"], 7)).pack(anchor="w")
+            lbl = tk.Label(box, text=val, bg=THEME["bg_card"], fg="#A7F3D0", font=("Consolas", 8, "bold"))
+            lbl.pack(anchor="w")
+            self.exec_monitor_vars[key] = lbl
+
+        # ACTION RATE METRICS TABLE (Regra #19)
+        rate_frame = tk.Frame(mon_frame, bg=THEME["bg_dark"])
+        rate_frame.pack(fill="x", pady=(6, 2))
+        
+        self.action_rate_vars = {}
+        rate_defs = [
+            ("OBSERVATIONS", "rate_obs", "0"),
+            ("DECISIONS", "rate_dec", "0"),
+            ("INPUT REQUESTS", "rate_in_req", "0"),
+            ("INPUT DISPATCHED", "rate_in_disp", "0"),
+            ("ACTIONS VERIFIED", "rate_act_ver", "0"),
+            ("ACTIONS UNCONFIRMED", "rate_act_unconf", "0"),
+        ]
+        for title, key, val in rate_defs:
+            box = tk.Frame(rate_frame, bg=THEME["bg_card_alt"], padx=8, pady=4)
+            box.pack(side="left", fill="both", expand=True, padx=2)
+            tk.Label(box, text=title, bg=THEME["bg_card_alt"], fg=THEME["text_muted"], font=(THEME["font_family"], 7, "bold")).pack(anchor="w")
+            lbl = tk.Label(box, text=val, bg=THEME["bg_card_alt"], fg="#FBBF24", font=("Consolas", 9, "bold"))
+            lbl.pack(anchor="w")
+            self.action_rate_vars[key] = lbl
 
         btn_bar = tk.Frame(card, bg=THEME["bg_card"])
         btn_bar.pack(fill="x", pady=(0, 10))
@@ -1228,27 +1261,52 @@ class ModernLumenaGUI:
                     self.val_level_labels["LEVEL 6"].configure(text="NOT VALIDATED (Ação Usuário)", fg=THEME["status_warning"])
                     self.val_level_labels["LEVEL 7"].configure(text="BLOQUEADO (Requer Level 6 PASS)", fg=THEME["status_warning"])
 
-            if self.current_page == "diagnostics" and hasattr(self, "exec_health_labels") and hasattr(self.bot_controller.engine, "health_monitor"):
+            if self.current_page == "diagnostics" and hasattr(self.bot_controller.engine, "health_monitor"):
                 hm = self.bot_controller.engine.health_monitor
-                for k, lbl in self.exec_health_labels.items():
-                    ok = hm.get(k, True)
-                    lbl.configure(text="● PASS" if ok else "● FAIL", fg=THEME["status_active"] if ok else THEME["status_error"])
 
                 if hasattr(self, "exec_monitor_vars"):
-                    self.exec_monitor_vars["exec_goal"].configure(text=hm.get("current_goal", "IDLE"))
-                    self.exec_monitor_vars["exec_target"].configure(text=hm.get("current_target", "NONE"))
+                    self.exec_monitor_vars["exec_state"].configure(text=str(hm.get("state", state)))
+                    self.exec_monitor_vars["exec_target"].configure(text=str(hm.get("target", hm.get("current_target", "NONE")))[:15])
+                    self.exec_monitor_vars["exec_target_type"].configure(text=str(hm.get("target_type", "NONE"))[:15])
                     self.exec_monitor_vars["exec_conf"].configure(text=f"{hm.get('target_confidence', 0.0):.2f}")
-                    self.exec_monitor_vars["exec_action"].configure(text=str(hm.get("last_action", "NONE"))[:15])
-                    self.exec_monitor_vars["exec_input"].configure(text=str(hm.get("last_input", "NONE")))
-                    self.exec_monitor_vars["exec_verified"].configure(text=str(hm.get("last_verified_action", "NONE"))[:15])
+                    
+                    p_pos = hm.get("player_pos", (0, 0))
+                    self.exec_monitor_vars["exec_player_pos"].configure(text=f"({p_pos[0]}, {p_pos[1]})")
+                    
+                    t_pos = hm.get("target_pos", (0, 0))
+                    self.exec_monitor_vars["exec_target_pos"].configure(text=f"({t_pos[0]}, {t_pos[1]})")
+                    
+                    self.exec_monitor_vars["exec_dist"].configure(text=f"{hm.get('distance', 0.0):.1f} px")
+                    self.exec_monitor_vars["exec_decision"].configure(text=str(hm.get("decision", "NONE"))[:18])
+                    self.exec_monitor_vars["exec_input"].configure(text=str(hm.get("input", hm.get("last_input", "NONE")))[:10])
+                    self.exec_monitor_vars["exec_window"].configure(text=str(hm.get("window", "NONE"))[:15])
+                    self.exec_monitor_vars["exec_fg"].configure(text="TRUE" if hm.get("foreground") else "FALSE")
+                    self.exec_monitor_vars["exec_canvas"].configure(text="DETECTED" if hm.get("canvas") else "NONE")
+                    self.exec_monitor_vars["exec_dispatch"].configure(text="YES" if hm.get("input_dispatched") else "NO")
                     self.exec_monitor_vars["exec_delta"].configure(text=f"{hm.get('visual_delta', 0.0):.4f}")
+                    self.exec_monitor_vars["exec_result"].configure(text=str(hm.get("action_result", "NONE")))
+                    self.exec_monitor_vars["exec_action"].configure(text=str(hm.get("last_action", "NONE"))[:15])
+                    self.exec_monitor_vars["exec_elapsed"].configure(text=f"{hm.get('time_since_last_action', 0.0):.1f}s")
+
+                if hasattr(self, "action_rate_vars"):
+                    self.action_rate_vars["rate_obs"].configure(text=str(snap.get("observations_total", 0)))
+                    self.action_rate_vars["rate_dec"].configure(text=str(snap.get("decisions_total", 0)))
+                    self.action_rate_vars["rate_in_req"].configure(text=str(snap.get("input_requests_total", 0)))
+                    self.action_rate_vars["rate_in_disp"].configure(text=str(snap.get("input_dispatched_total", 0)))
+                    self.action_rate_vars["rate_act_ver"].configure(text=str(snap.get("actions_verified_total", 0)))
+                    self.action_rate_vars["rate_act_unconf"].configure(text=str(snap.get("actions_unconfirmed_total", 0)))
 
             if self.current_page == "telemetry":
                 t_text = (
                     f"Métricas Operacionais em Tempo Real:\n"
                     f"• Uptime                : {uptime:.1f}s\n"
                     f"• FPS Atual             : {fps:.1f}\n"
-                    f"• Ações Executadas      : {snap.get('actions_total', 0)} (Sucessos: {snap.get('actions_successful', 0)}, Falhas: {snap.get('actions_failed', 0)})\n"
+                    f"• Observações Totais    : {snap.get('observations_total', 0)}\n"
+                    f"• Decisões Tomadas      : {snap.get('decisions_total', 0)}\n"
+                    f"• Requisições de Input  : {snap.get('input_requests_total', 0)}\n"
+                    f"• Inputs Despachados    : {snap.get('input_dispatched_total', 0)}\n"
+                    f"• Ações Confirmadas     : {snap.get('actions_verified_total', 0)}\n"
+                    f"• Ações Não-Confirmadas : {snap.get('actions_unconfirmed_total', 0)}\n"
                     f"• Ações / Minuto        : {snap.get('actions_per_minute', 0.0):.1f}\n"
                     f"• Latência Média Ação   : {latency:.1f} ms\n"
                     f"• Batalhas Totais       : {snap.get('battles_total', 0)} ({snap.get('victories_total', 0)} Vitórias, {snap.get('defeats_total', 0)} Derrotas)\n"

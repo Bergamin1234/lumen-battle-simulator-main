@@ -3,6 +3,7 @@ import logging
 from enum import Enum
 from dataclasses import dataclass
 from typing import Optional, Set, Dict, Any, Tuple
+import numpy as np
 
 from src.models.lumen import StateSnapshot, TeamStatus, BattleTelemetry
 from src.models.combat_vision import CombatSnapshot, CombatDecision, SkillSlot
@@ -11,6 +12,7 @@ from src.combat.action_executor import ActionExecutor
 from src.combat.skill_executor import SkillExecutor
 from src.memory.memory_manager import MemoryManager
 from src.core.event_bus import EventBus, EventType
+from src.telemetry.telemetry_manager import TelemetryManager
 
 logger = logging.getLogger("LumenaCombat")
 
@@ -57,6 +59,7 @@ class CombatAgent:
     ) -> None:
         self.logger = logging.getLogger("LumenaCombat")
         self.event_bus = EventBus()
+        self.telemetry = TelemetryManager()
         self.decision_engine = decision_engine or CombatDecisionEngine()
         self.action_executor = action_executor or ActionExecutor(memory_manager=memory_manager)
         self.skill_executor = skill_executor or SkillExecutor()
@@ -82,8 +85,12 @@ class CombatAgent:
         self,
         snapshot: CombatSnapshot,
         screen_capture_func: Optional[Any] = None,
+        frame_before: Optional[np.ndarray] = None,
     ) -> CombatTurnResult:
         """Executa um ciclo completo de combate baseado em CombatSnapshot dinâmico da visão com verificação pós-ação."""
+        if hasattr(self, "telemetry") and self.telemetry:
+            self.telemetry.record_observation()
+
         if not snapshot.in_battle and not snapshot.target_enemy:
             self.current_state = CombatAgentState.WAITING_FOR_BATTLE
             return CombatTurnResult(
@@ -100,6 +107,9 @@ class CombatAgent:
         decision: CombatDecision = self.decision_engine.evaluate_combat_snapshot(
             snapshot, recent_failed_skills=self._failed_targets_this_battle
         )
+        if hasattr(self, "telemetry") and self.telemetry:
+            self.telemetry.record_decision()
+
         self.logger.info(
             f"🎯 [Combate Dinâmico | Turno {self.turn_count + 1}] Decisão: {decision.action_type} "
             f"(Score: {decision.score:.1f} | Razão: {decision.reason})"
@@ -117,7 +127,12 @@ class CombatAgent:
                 level="DEBUG",
                 message=f"Posicionamento de combate: {decision.action_type} via '{move_key}'",
             )
+            if hasattr(self, "telemetry") and self.telemetry:
+                self.telemetry.record_input_request()
             executed_ok = self.skill_executor.input_ctrl.press_key(move_key, duration=0.15)
+            if executed_ok and hasattr(self, "telemetry") and self.telemetry:
+                self.telemetry.record_input_dispatched()
+
             self.event_bus.publish(
                 EventType.POSITIONING_COMPLETED,
                 data={"direction": move_key, "success": executed_ok},
@@ -128,36 +143,60 @@ class CombatAgent:
 
         elif decision.action_type == "USE_SKILL" and decision.selected_skill:
             self.current_state = CombatAgentState.EXECUTING_ACTION
-            executed_ok, _ = self.skill_executor.execute_skill(decision.selected_skill)
+            if hasattr(self, "telemetry") and self.telemetry:
+                self.telemetry.record_input_request()
+
+            try:
+                executed_ok, _ = self.skill_executor.execute_skill(decision.selected_skill, frame_before=frame_before)
+            except TypeError:
+                executed_ok, _ = self.skill_executor.execute_skill(decision.selected_skill)
+
+            if executed_ok and hasattr(self, "telemetry") and self.telemetry:
+                self.telemetry.record_input_dispatched()
 
             # Verificação pós-ação (Action Verification)
             self.current_state = CombatAgentState.VERIFYING_ACTION
+            visual_delta = 0.0
             if screen_capture_func:
                 try:
                     time.sleep(0.15)
                     after_frame, _ = screen_capture_func()
-                    if after_frame is not None:
-                        # Compara se houve alteração visual ou de cooldown
-                        self.logger.debug("[Combate] Verificando resultado visual do ataque...")
+                    if after_frame is not None and frame_before is not None:
+                        confirmed, visual_delta = self.skill_executor.input_ctrl.compute_visual_delta(frame_before, after_frame)
+                        self.logger.debug(f"[Combate] Verificando resultado visual do ataque: delta={visual_delta:.4f}")
                 except Exception as e:
                     self.logger.error(f"Erro na verificação visual pós-ação: {e}")
 
             if not executed_ok:
                 skill_id = decision.selected_skill.id or f"skill_slot_{decision.selected_skill.slot_index}"
                 self._failed_targets_this_battle.add(skill_id)
+                if hasattr(self, "telemetry") and self.telemetry:
+                    self.telemetry.record_action_unconfirmed()
                 self.event_bus.publish(
                     EventType.ACTION_UNCONFIRMED,
-                    data={"skill": decision.selected_skill.skill_name, "id": skill_id},
+                    data={"skill": decision.selected_skill.skill_name, "id": skill_id, "delta": visual_delta},
                     category="COMBAT",
                     level="WARNING",
                     message=f"ACTION_UNCONFIRMED: Ataque '{decision.selected_skill.skill_name}' não confirmado.",
                 )
+            else:
+                if hasattr(self, "telemetry") and self.telemetry:
+                    self.telemetry.record_action_verified()
 
         elif decision.action_type == "OPEN_FIGHT_MENU" and snapshot.fight_button_pos:
             self.current_state = CombatAgentState.EXECUTING_ACTION
+            if hasattr(self, "telemetry") and self.telemetry:
+                self.telemetry.record_input_request()
             executed_ok = self.skill_executor.input_ctrl.click(snapshot.fight_button_pos[0], snapshot.fight_button_pos[1])
+            if executed_ok and hasattr(self, "telemetry") and self.telemetry:
+                self.telemetry.record_input_dispatched()
         elif decision.action_type in ("CONFIRM_VICTORY", "CLEAR_DEFEAT", "ADVANCE_DIALOG"):
             self.current_state = CombatAgentState.EXECUTING_ACTION
+            if hasattr(self, "telemetry") and self.telemetry:
+                self.telemetry.record_input_request()
+            executed_ok = self.skill_executor.input_ctrl.click(960, 540)
+            if executed_ok and hasattr(self, "telemetry") and self.telemetry:
+                self.telemetry.record_input_dispatched()
             executed_ok = self.skill_executor.input_ctrl.click(960, 540)
         else:
             executed_ok = True

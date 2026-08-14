@@ -227,20 +227,25 @@ def run_real_world_test(interactive: bool = False) -> Dict[str, Any]:
     recent_events = [e.__dict__ for e in bus.get_recent_events(50)]
 
     result_data = {
-        "test_id": "LEVEL_6_PHYSICAL_MOVEMENT",
-        "timestamp": report["timestamp"],
-        "success": bool(report["step_17_movement_confirmed"]),
-        "physically_validated": bool(report["step_17_movement_confirmed"]),
         "target_window_verified": bool(report["step_9_foreground_confirmed"]),
+        "foreground_verified": bool(report["step_9_foreground_confirmed"]),
+        "input_dispatched": bool(report["step_14_w_dispatched_and_released"]),
+        "visual_change_detected": bool(report["step_17_movement_confirmed"]),
         "visual_delta": float(report["step_16_visual_delta"]),
         "action_verified": bool(report["step_17_movement_confirmed"]),
+        "physical_execution_verified": bool(report["step_17_movement_confirmed"]),
+        "target_type": "OVERWORLD_CHARACTER",
+        "target_confidence": 1.0,
+        "action": "MOVE_W",
+        "failure_reason": "" if report["step_17_movement_confirmed"] else report["status"],
+        "timestamp": report["timestamp"],
+        "test_id": "LEVEL_6_PHYSICAL_MOVEMENT",
         "target_window": window_data,
         "input": input_data,
         "before_frame": os.path.relpath(report["step_12_screenshot_before"], evidence_dir) if report["step_12_screenshot_before"] else None,
         "after_frame": os.path.relpath(report["step_15_screenshot_after"], evidence_dir) if report["step_15_screenshot_after"] else None,
         "diff_frame": "diff.png" if os.path.exists(os.path.join(evidence_dir, "diff.png")) else None,
         "events": recent_events,
-        "failure_reason": None if report["step_17_movement_confirmed"] else report["status"],
         "result": "PASS" if report["step_17_movement_confirmed"] else "NOT VALIDATED",
     }
 

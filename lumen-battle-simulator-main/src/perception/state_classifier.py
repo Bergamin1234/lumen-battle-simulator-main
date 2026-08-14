@@ -4,7 +4,7 @@ from typing import Optional, Dict
 import numpy as np
 
 from src.models.enums import AgentState
-from src.models.lumen import StateSnapshot, BattleTelemetry, UIElement
+from src.models.lumen import StateSnapshot, BattleTelemetry, UIElement, PlayerInfo, TargetLockInfo
 from src.perception.ui_detector import UIDetector
 from src.perception.battle_detector import BattleDetector
 from src.perception.world_detector import WorldDetector
@@ -51,25 +51,45 @@ class StateClassifier:
                 crystal_relative_pos=None,
                 grass_density=0.0,
                 motion_energy=0.0,
+                player_info=PlayerInfo(detected=False),
             )
 
         try:
             # 1. Executa detecção de UI
             ui_elements = self.ui_detector.detect_all(frame)
 
-            # 2. Executa detecção de Batalha
+            # 2. Executa detecção do Jogador (Player)
+            p_found, p_bbox, p_center, p_conf = self.landmark_detector.detect_player(frame)
+            player_info = PlayerInfo(
+                x=p_bbox[0],
+                y=p_bbox[1],
+                center=p_center,
+                bounding_box=p_bbox,
+                confidence=p_conf,
+                detected=p_found,
+            )
+            if p_found:
+                ui_elements["player"] = UIElement(
+                    name="player",
+                    bounding_box=p_bbox,
+                    confidence=p_conf,
+                    center=p_center,
+                    semantic_type="PLAYER",
+                )
+
+            # 3. Executa detecção de Batalha
             battle_telemetry = self.battle_detector.detect_battle_state(frame)
 
-            # 3. Executa detecção do Mundo e Vegetação
+            # 4. Executa detecção do Mundo e Vegetação
             world_features = self.world_detector.detect_world_features(frame)
             grass_density = world_features["grass_density"]
 
-            # 4. Executa detecção de Marcos (Cristal Azul de Cura)
-            crystal_found, crystal_pos, crystal_elem = self.landmark_detector.detect_crystal(frame)
+            # 5. Executa detecção de Marcos (Cristal Azul de Cura relativo ao Jogador)
+            crystal_found, crystal_pos, crystal_elem = self.landmark_detector.detect_crystal(frame, player_pos=p_center)
             if crystal_found and crystal_elem is not None:
                 ui_elements["blue_crystal"] = crystal_elem
 
-            # 5. Classificação Semântica do Estado do Agente
+            # 6. Classificação Semântica do Estado do Agente
             state = self._determine_agent_state(
                 ui_elements=ui_elements,
                 battle_telemetry=battle_telemetry,
@@ -89,6 +109,7 @@ class StateClassifier:
                 crystal_relative_pos=crystal_pos,
                 grass_density=grass_density,
                 motion_energy=motion_energy,
+                player_info=player_info,
             )
 
         except Exception as e:
@@ -102,6 +123,7 @@ class StateClassifier:
                 crystal_relative_pos=None,
                 grass_density=0.0,
                 motion_energy=motion_energy,
+                player_info=PlayerInfo(detected=False),
             )
 
     def _determine_agent_state(

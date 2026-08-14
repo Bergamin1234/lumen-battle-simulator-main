@@ -18,6 +18,18 @@ class TelemetryData:
     defeats_total: int = 0
     recoveries_total: int = 0
     inputs_total: int = 0
+    # Action Rate Metrics
+    observations_total: int = 0
+    decisions_total: int = 0
+    input_requests_total: int = 0
+    input_dispatched_total: int = 0
+    actions_verified_total: int = 0
+    actions_unconfirmed_total: int = 0
+    movement_actions_total: int = 0
+    combat_actions_total: int = 0
+    healing_actions_total: int = 0
+    recovery_attempts_total: int = 0
+    real_execution_status: str = "IDLE"  # IDLE, OBSERVING, DECIDING, EXECUTING, VERIFYING, STALLED, SAFE_STOP
     last_perception_confidence: float = 0.0
     average_action_latency: float = 0.0
     current_state: str = "STOPPED"
@@ -63,6 +75,51 @@ class TelemetryManager:
                 if dt > 0:
                     self._data.fps = round((len(self._frame_timestamps) - 1) / dt, 1)
 
+    def record_observation(self) -> None:
+        with self._lock:
+            self._data.observations_total += 1
+
+    def record_decision(self) -> None:
+        with self._lock:
+            self._data.decisions_total += 1
+
+    def record_input_request(self) -> None:
+        with self._lock:
+            self._data.input_requests_total += 1
+
+    def record_input_dispatched(self) -> None:
+        with self._lock:
+            self._data.input_dispatched_total += 1
+            self._data.inputs_total += 1
+
+    def record_action_verified(self) -> None:
+        with self._lock:
+            self._data.actions_verified_total += 1
+
+    def record_action_unconfirmed(self) -> None:
+        with self._lock:
+            self._data.actions_unconfirmed_total += 1
+
+    def record_movement_action(self) -> None:
+        with self._lock:
+            self._data.movement_actions_total += 1
+
+    def record_combat_action(self) -> None:
+        with self._lock:
+            self._data.combat_actions_total += 1
+
+    def record_healing_action(self) -> None:
+        with self._lock:
+            self._data.healing_actions_total += 1
+
+    def record_recovery_attempt(self) -> None:
+        with self._lock:
+            self._data.recovery_attempts_total += 1
+
+    def set_real_execution_status(self, status: str) -> None:
+        with self._lock:
+            self._data.real_execution_status = status
+
     def record_action(self, success: bool, latency: float = 0.0, action_type: str = "") -> None:
         """Registra uma ação executada pelo agente."""
         now = time.time()
@@ -70,8 +127,10 @@ class TelemetryManager:
             self._data.actions_total += 1
             if success:
                 self._data.actions_successful += 1
+                self._data.actions_verified_total += 1
             else:
                 self._data.actions_failed += 1
+                self._data.actions_unconfirmed_total += 1
 
             if latency > 0:
                 self._action_latencies.append(latency)
@@ -87,6 +146,7 @@ class TelemetryManager:
     def record_input(self) -> None:
         with self._lock:
             self._data.inputs_total += 1
+            self._data.input_dispatched_total += 1
 
     def record_battle_result(self, is_victory: bool) -> None:
         with self._lock:
@@ -139,6 +199,12 @@ class TelemetryManager:
                 "actions_successful": self._data.actions_successful,
                 "actions_failed": self._data.actions_failed,
                 "actions_per_minute": self._data.actions_per_minute,
+                "observations_total": self._data.observations_total,
+                "decisions_total": self._data.decisions_total,
+                "input_requests_total": self._data.input_requests_total,
+                "input_dispatched_total": self._data.input_dispatched_total,
+                "actions_verified_total": self._data.actions_verified_total,
+                "actions_unconfirmed_total": self._data.actions_unconfirmed_total,
                 "battles_total": self._data.battles_total,
                 "victories_total": self._data.victories_total,
                 "defeats_total": self._data.defeats_total,

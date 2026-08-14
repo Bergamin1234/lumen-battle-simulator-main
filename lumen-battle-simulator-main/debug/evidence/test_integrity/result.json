@@ -1,0 +1,14 @@
+{
+  "target_window_verified": true,
+  "foreground_verified": true,
+  "input_dispatched": true,
+  "visual_change_detected": false,
+  "visual_delta": 0.001,
+  "action_verified": false,
+  "physical_execution_verified": false,
+  "target_type": "UNKNOWN",
+  "target_confidence": 0.0,
+  "action": "MOVE_W",
+  "failure_reason": "",
+  "timestamp": "2026-08-14_09-54-51"
+}

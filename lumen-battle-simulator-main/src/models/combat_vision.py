@@ -69,9 +69,12 @@ class SkillSlot:
     priority: float = 1.0
     last_seen: float = 0.0
     last_used: float = 0.0
-    visual_signature: Optional[str] = None
     current_pp: int = 15
     max_pp: int = 15
+
+    @property
+    def is_available(self) -> bool:
+        return self.available and not self.disabled and self.cooldown_ratio < 0.1
 
     def __post_init__(self):
         if not self.id:
@@ -128,6 +131,7 @@ class CombatSnapshot:
     target_enemy: Optional[EnemyTarget] = None
     detected_enemies: List[EnemyTarget] = field(default_factory=list)
     available_skills: List[SkillSlot] = field(default_factory=list)
+    skill_slots: Optional[List[SkillSlot]] = None
     combat_state: str = "IDLE"
     position_info: Optional[PositionInfo] = None
     dialog_active: bool = False
@@ -135,6 +139,13 @@ class CombatSnapshot:
     victory_detected: bool = False
     defeat_detected: bool = False
     fight_button_pos: Optional[Tuple[int, int]] = None
+    distance_to_target: float = 0.0
+
+    def __post_init__(self):
+        if self.skill_slots and not self.available_skills:
+            self.available_skills = self.skill_slots
+        if self.distance_to_target > 0 and not self.position_info:
+            self.position_info = PositionInfo(distance=self.distance_to_target)
 
 
 @dataclass
