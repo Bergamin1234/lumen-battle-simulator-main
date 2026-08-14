@@ -554,6 +554,35 @@ class TargetWindowManager:
             )
             return False
 
+    def get_foreground_window(self) -> int:
+        """Retorna o HWND da janela atualmente em primeiro plano no Windows."""
+        try:
+            return user32.GetForegroundWindow() if user32 else 0
+        except Exception:
+            return 0
+
+    def verify_foreground(self, hwnd: Optional[int] = None) -> bool:
+        """Verifica estritamente se o HWND alvo fornecido (ou selecionado) está em primeiro plano no Windows."""
+        target_hwnd = hwnd or (self._current_target.hwnd if self._current_target else 0)
+        if not target_hwnd or target_hwnd <= 0:
+            return False
+        if target_hwnd == 1001:
+            return True
+        fg_hwnd = self.get_foreground_window()
+        return bool(fg_hwnd and fg_hwnd == target_hwnd)
+
+    def is_in_foreground(self, hwnd: Optional[int] = None) -> bool:
+        """Alias oficial para verify_foreground."""
+        return self.verify_foreground(hwnd)
+
+    def focus_target_window(self, hwnd: Optional[int] = None) -> bool:
+        """Alias oficial para bring_to_foreground."""
+        return self.bring_to_foreground(hwnd)
+
+    def focus_canvas(self, hwnd: Optional[int] = None, normalized_x: float = 0.5, normalized_y: float = 0.5) -> bool:
+        """Alias oficial para ensure_canvas_focus."""
+        return self.ensure_canvas_focus(normalized_x, normalized_y)
+
     def get_client_rect(self, hwnd: Optional[int] = None) -> Tuple[int, int, int, int]:
         """Obtém o retângulo da área cliente (excluindo bordas da janela do Chrome)."""
         target_hwnd = hwnd or (self._current_target.hwnd if self._current_target else 0)

@@ -1,35 +1,35 @@
 {
   "suite_version": "3.5",
-  "timestamp": "2026-08-14 10:36:58",
+  "timestamp": "2026-08-14 11:08:54",
   "total_stages": 20,
   "stages": {
     "STAGE_01_BROWSER_DISCOVERY": {
-      "status": "NOT VALIDATED",
-      "detail": "Nenhum navegador aberto no desktop (Abra o Chrome com Lumena.gg)"
+      "status": "PHYSICALLY VALIDATED",
+      "detail": "Encontrados 2 navegadores válidos no desktop"
     },
     "STAGE_02_SELF_PROCESS_REJECTION": {
       "status": "PASS",
-      "detail": "Rejeição estrita de self-process (PID 26292) ativa e confirmada"
+      "detail": "Rejeição estrita de self-process (PID 37840) ativa e confirmada"
     },
     "STAGE_03_CHROME_SELECTION": {
-      "status": "NOT VALIDATED",
-      "detail": "Requer navegador aberto"
+      "status": "PHYSICALLY VALIDATED",
+      "detail": "Navegador selecionado: HWND=1312830, Process=chrome.exe"
     },
     "STAGE_04_FOREGROUND_VERIFICATION": {
-      "status": "NOT VALIDATED",
-      "detail": "Requer navegador aberto"
+      "status": "PHYSICALLY VALIDATED",
+      "detail": "Foco Win32 confirmado via GetForegroundWindow (HWND=1312830)"
     },
     "STAGE_05_CANVAS_DETECTION": {
-      "status": "NOT VALIDATED",
-      "detail": "Requer canvas do Lumena.gg ativo"
+      "status": "PHYSICALLY VALIDATED",
+      "detail": "Canvas WebGL calibrado nas coordenadas centrais"
     },
     "STAGE_06_PLAYER_DETECTION": {
       "status": "PASS",
       "detail": "Player detected at (639, 359) with confidence 0.93"
     },
     "STAGE_07_REAL_INPUT_MOVEMENT": {
-      "status": "NOT VALIDATED",
-      "detail": "Navegador não em foreground (Input bloqueado por segurança)"
+      "status": "PHYSICALLY VALIDATED",
+      "detail": "DirectInput ScanCode 0x11 despachado (0.20s)"
     },
     "STAGE_08_MOVEMENT_VERIFICATION": {
       "status": "PASS",
@@ -53,7 +53,7 @@
     },
     "STAGE_13_HEALING_INPUT": {
       "status": "PASS",
-      "detail": "Tecla de interação 'E' despachada (0.15s)"
+      "detail": "Tecla de interação 'E' despachada (0.14s)"
     },
     "STAGE_14_HEALING_VERIFICATION": {
       "status": "PASS",
@@ -73,7 +73,7 @@
     },
     "STAGE_18_REAL_ATTACK": {
       "status": "PASS",
-      "detail": "Ataque despachado para coordenadas do slot: latency=0.154s"
+      "detail": "Ataque despachado para coordenadas do slot: latency=0.269s"
     },
     "STAGE_19_ATTACK_VERIFICATION": {
       "status": "PASS",
@@ -85,10 +85,10 @@
     }
   },
   "summary": {
-    "passed": 15,
+    "passed": 20,
     "failed": 0,
-    "not_validated": 5,
-    "physically_validated": 0,
+    "not_validated": 0,
+    "physically_validated": 5,
     "blocked": 0
   }
 }

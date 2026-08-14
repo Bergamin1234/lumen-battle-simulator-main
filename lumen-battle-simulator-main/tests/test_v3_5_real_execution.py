@@ -148,6 +148,34 @@ class TestV35RealExecution(unittest.TestCase):
         res_file = os.path.join(pkg, "result.json")
         self.assertTrue(os.path.exists(res_file))
 
+    def test_verify_foreground_api(self):
+        """Fase 1 Hotfix: TargetWindowManager e InputController implementam verify_foreground de forma consistente."""
+        win_mgr = TargetWindowManager()
+        input_ctrl = InputController()
+
+        # HWND inválido ou zero deve retornar False
+        self.assertFalse(win_mgr.verify_foreground(0))
+        self.assertFalse(win_mgr.verify_foreground(-1))
+        self.assertFalse(input_ctrl.verify_foreground(0))
+
+        # HWND 1001 (mock explícito de teste) retorna True
+        self.assertTrue(win_mgr.verify_foreground(1001))
+        self.assertTrue(input_ctrl.verify_foreground(1001))
+        self.assertTrue(win_mgr.is_in_foreground(1001))
+
+        # get_foreground_window retorna int
+        fg_hwnd = win_mgr.get_foreground_window()
+        self.assertIsInstance(fg_hwnd, int)
+
+    def test_focus_target_window_and_canvas_aliases(self):
+        """Fase 1 Hotfix: TargetWindowManager expõe aliases focus_target_window e focus_canvas."""
+        win_mgr = TargetWindowManager()
+        self.assertTrue(hasattr(win_mgr, "focus_target_window"))
+        self.assertTrue(hasattr(win_mgr, "focus_canvas"))
+        self.assertTrue(hasattr(win_mgr, "verify_foreground"))
+        self.assertTrue(hasattr(win_mgr, "is_in_foreground"))
+        self.assertTrue(hasattr(win_mgr, "get_foreground_window"))
+
 
 if __name__ == "__main__":
     unittest.main()

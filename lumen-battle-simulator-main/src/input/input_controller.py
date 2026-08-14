@@ -132,6 +132,10 @@ class InputController:
     def is_target_focused(self) -> bool:
         return self._is_window_focused
 
+    def verify_foreground(self, hwnd: Optional[int] = None) -> bool:
+        """Verifica se a janela alvo do jogo está estritamente em primeiro plano no Windows."""
+        return self.window_manager.verify_foreground(hwnd)
+
     def compute_visual_delta(self, frame_before: Optional[np.ndarray], frame_after: Optional[np.ndarray]) -> Tuple[bool, float]:
         """Calcula a variação de pixels entre dois frames para confirmar se houve resposta física real."""
         if frame_before is None or frame_after is None:
