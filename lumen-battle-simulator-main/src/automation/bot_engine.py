@@ -1,6 +1,7 @@
 import time
 import os
 import json
+import math
 import logging
 import threading
 import cv2
@@ -9,6 +10,7 @@ import numpy as np
 
 from config.settings import BotConfig, KeyBindings, MonitorConfig, BattleConfig
 from src.models import StateSnapshot, BattleTelemetry, TeamStatus, AgentState
+from src.models.combat_vision import CombatSnapshot
 from src.input.input_controller import InputController
 from src.perception.screen_capture import ScreenCapture
 from src.perception.state_classifier import StateClassifier
@@ -76,9 +78,25 @@ class LumenaBotEngine:
 
         # Execution Health & Watchdog Tracker (Real Execution Panel - Regras #18 e #19)
         self._last_physical_action_time = time.time()
+        self._last_combat_action_time = time.time()
         self._stalled_warning_emitted = False
+        self._combat_stalled_emitted = False
+        self.critical_hp_ratio = getattr(self.config, "critical_hp_ratio", 0.20)
+        self.healing_hp_ratio = getattr(self.config, "healing_hp_ratio", 0.40)
+        self.combat_action_timeout = getattr(self.config, "combat_action_timeout", 5.0)
+
         self.health_monitor: Dict[str, Any] = {
             "state": "STOPPED",
+            "battle_status": "INACTIVE",
+            "enemy_detected": "NO",
+            "player_hp": "100 / 100",
+            "hp_ratio": "100.0%",
+            "healing_required": "NO",
+            "crystal_search": "BLOCKED",
+            "crystal_search_blocked": True,
+            "skills_detected": 0,
+            "skills_available": 0,
+            "selected_skill": "NONE",
             "target": "NONE",
             "target_type": "NONE",
             "target_confidence": 0.0,
@@ -257,9 +275,13 @@ class LumenaBotEngine:
         confidence = 0.9 if snapshot.screen_state != AgentState.UNKNOWN_STATE else 0.2
         self.telemetry.update_perception_confidence(confidence)
 
-        # Atualiza métricas de monitoramento em tempo real (Regra #18)
+        # 2.1 Análise Visual de Combate Dinâmico (SkillScanner & EnemyVision)
+        combat_snapshot = self.combat_vision.analyze_frame(frame, timestamp=timestamp)
+        bt = snapshot.battle_telemetry
+
+        # Atualiza métricas de monitoramento em tempo real (Regra #18 e #19)
         target_info = self.input_ctrl.window_manager._current_target
-        fg_hwnd = self.input_ctrl.window_manager.user32.GetForegroundWindow() if hasattr(self.input_ctrl.window_manager, "user32") else 0
+        fg_hwnd = self.input_ctrl.window_manager.get_foreground_window()
         is_fg = bool(target_info and target_info.hwnd == fg_hwnd)
         self.health_monitor["window"] = target_info.title if target_info else "NONE"
         self.health_monitor["foreground"] = is_fg
@@ -270,12 +292,12 @@ class LumenaBotEngine:
             self.health_monitor["player_pos"] = snapshot.player_info.center
 
         # Gera frame anotado para a página Vision da GUI
-        self._latest_annotated_frame = self._generate_annotated_frame(frame, snapshot)
+        self._latest_annotated_frame = self._generate_annotated_frame(frame, snapshot, combat_snapshot)
 
         # 3. MEMORY: Atualização da Memória Operacional
         self.memory_manager.update_from_snapshot(snapshot)
 
-        # Watchdog: Verifica se o bot está travado apenas observando sem ação física (> 15s)
+        # Watchdog Geral: Verifica se o bot está travado apenas observando sem ação física (> 15s)
         if self._running and not self._paused:
             if time.time() - self._last_physical_action_time > 15.0:
                 if not self._stalled_warning_emitted:
@@ -291,37 +313,70 @@ class LumenaBotEngine:
                     self._stalled_warning_emitted = True
                     self.input_ctrl.focus_game_window()
 
-        # 4. DECIDE & ACT: Hierarquia Estrita de Objetivos e Máquina de Estados
-        bt = snapshot.battle_telemetry
+        # 4. DECIDE & ACT: HIERARQUIA REVISADA v3.6 (Batalha > Exploração > Cura Preventiva)
         team_needs_heal = self.memory_manager.team_status.requires_immediate_heal if hasattr(self.memory_manager, "team_status") and self.memory_manager.team_status else False
 
+        # Extração e normalização da taxa de HP do jogador
+        player_hp_pct = bt.player_hp_pct if (bt and bt.player_hp_pct is not None) else (combat_snapshot.player_hp if combat_snapshot and combat_snapshot.player_hp is not None else 1.0)
+        self.health_monitor["hp_ratio"] = f"{player_hp_pct * 100:.1f}%"
+        self.health_monitor["player_hp"] = f"{int(player_hp_pct * 113)} / 113"
+
+        crit_threshold = self.critical_hp_ratio
+        heal_threshold = self.healing_hp_ratio
+
+        # Detecção de Batalha Ativa (Combinação Multimodal: Telemetria + Classificador + Inimigo Visível + UI)
+        is_battle_active = bool(
+            (bt and bt.in_battle) or
+            (snapshot.screen_state in (AgentState.BATTLE, AgentState.BATTLE_DETECTED)) or
+            (combat_snapshot.in_battle) or
+            (combat_snapshot.target_enemy is not None and combat_snapshot.target_enemy.confidence >= 0.60)
+        )
+
         if bt and bt.victory_detected:
+            self.health_monitor["battle_status"] = "VICTORY"
             self.fsm.transition_to(BotState.VICTORY, reason="Tela de Vitória Detectada")
             self.telemetry.record_battle_result(is_victory=True)
             self.event_bus.publish(EventType.BATTLE_WON, category="COMBAT", level="INFO", message="Batalha vencida!")
-            self._handle_battle_cycle(snapshot, frame)
+            self._handle_battle_cycle(snapshot, frame, combat_snapshot=combat_snapshot)
 
         elif bt and bt.defeat_detected:
+            self.health_monitor["battle_status"] = "DEFEAT"
             self.fsm.transition_to(BotState.DEFEAT, reason="Tela de Derrota Detectada")
             self.telemetry.record_battle_result(is_victory=False)
             self.event_bus.publish(EventType.BATTLE_LOST, category="COMBAT", level="WARNING", message="Batalha perdida ou Lumen desmaiou")
-            self._handle_battle_cycle(snapshot, frame)
+            self._handle_battle_cycle(snapshot, frame, combat_snapshot=combat_snapshot)
 
-        elif snapshot.screen_state in (AgentState.BATTLE, AgentState.BATTLE_DETECTED) or (bt and bt.in_battle):
+        elif is_battle_active:
+            # ========================================================
+            # REGRA ABSOLUTA: COMBATE TEM PRIORIDADE TOTAL
+            # ========================================================
+            self.health_monitor["battle_status"] = "ACTIVE"
             self.health_monitor["current_goal"] = "COMBAT"
             self.health_monitor["current_target"] = "ENEMY"
             self.health_monitor["target_type"] = "ENEMY"
             self.health_monitor["state"] = "BATTLE"
-            self.fsm.transition_to(BotState.BATTLE, reason="Interface de Batalha Ativa")
-            self.event_bus.publish(EventType.BATTLE_STARTED, category="COMBAT", level="INFO", message="Combate iniciado contra inimigo")
-            self._handle_battle_cycle(snapshot, frame)
+            self.health_monitor["crystal_search"] = "BLOCKED"
+            self.health_monitor["crystal_search_blocked"] = True
+            self.health_monitor["healing_required"] = "NO" if player_hp_pct > crit_threshold else "EMERGENCY"
 
-        elif team_needs_heal or snapshot.screen_state in (AgentState.HEALING, AgentState.SEARCHING_CRYSTAL) or snapshot.crystal_detected:
-            # Hierarquia de Objetivos: Cristal de Cura tem prioridade máxima quando necessário
+            if player_hp_pct <= crit_threshold:
+                self.logger.warning(f"⚠️ [EMERGÊNCIA] HP Crítico em Batalha ({player_hp_pct*100:.1f}% <= {crit_threshold*100:.1f}%)!")
+
+            self.fsm.transition_to(BotState.BATTLE, reason="Inimigo ou Interface de Batalha Ativa")
+            self._handle_battle_cycle(snapshot, frame, combat_snapshot=combat_snapshot)
+
+        elif (player_hp_pct <= heal_threshold or team_needs_heal):
+            # FORA DE COMBATE E HP BAIXO -> CURA PREVENTIVA
+            self.health_monitor["battle_status"] = "INACTIVE"
+            self.health_monitor["enemy_detected"] = "NO"
             self.health_monitor["current_goal"] = "HEAL"
             self.health_monitor["current_target"] = "HEALING_CRYSTAL"
             self.health_monitor["target_type"] = "HEALING_CRYSTAL"
             self.health_monitor["state"] = "HEALING"
+            self.health_monitor["crystal_search"] = "ALLOWED"
+            self.health_monitor["crystal_search_blocked"] = False
+            self.health_monitor["healing_required"] = "YES"
+
             crystal = snapshot.ui_elements.get("blue_crystal")
             if crystal:
                 self.health_monitor["target_confidence"] = crystal.confidence
@@ -331,36 +386,53 @@ class LumenaBotEngine:
             else:
                 self.health_monitor["target_confidence"] = 0.50
 
-            self.fsm.transition_to(BotState.HEALING, reason="Ponto de Cura / Cristal Ativo")
+            self.fsm.transition_to(BotState.HEALING, reason=f"HP Baixo fora de combate ({player_hp_pct*100:.1f}% <= {heal_threshold*100:.1f}%)")
             self._handle_healing_cycle(snapshot, frame)
 
         elif bt and bt.dialog_active:
+            self.health_monitor["battle_status"] = "INACTIVE"
             self.health_monitor["current_goal"] = "ADVANCE_DIALOG"
             self.health_monitor["state"] = "DIALOG"
+            self.health_monitor["crystal_search"] = "BLOCKED"
+            self.health_monitor["crystal_search_blocked"] = True
             self.fsm.transition_to(BotState.DIALOG, reason="Caixa de Diálogo Detectada")
             self._handle_dialog_cycle(snapshot)
 
         elif snapshot.screen_state in (AgentState.EXPLORING, AgentState.SEARCHING_FARM):
+            # FORA DE COMBATE COM HP SAUDÁVEL -> EXPLORAÇÃO
+            self.health_monitor["battle_status"] = "INACTIVE"
+            self.health_monitor["enemy_detected"] = "NO"
             self.health_monitor["current_goal"] = "EXPLORE"
             self.health_monitor["current_target"] = "NONE"
             self.health_monitor["target_type"] = "NONE"
             self.health_monitor["state"] = "EXPLORING"
-            self.fsm.transition_to(BotState.EXPLORING, reason="Mundo Aberto Ativo")
+            self.health_monitor["crystal_search"] = "BLOCKED"
+            self.health_monitor["crystal_search_blocked"] = True
+            self.health_monitor["healing_required"] = "NO"
+            self.fsm.transition_to(BotState.EXPLORING, reason="Mundo Aberto Ativo (HP Saudável)")
             self._handle_overworld_cycle(snapshot, frame)
 
         else:
             self.health_monitor["state"] = "OBSERVING"
+            self.health_monitor["battle_status"] = "INACTIVE"
+            self.health_monitor["crystal_search"] = "BLOCKED"
+            self.health_monitor["crystal_search_blocked"] = True
             self.fsm.transition_to(BotState.OBSERVING, reason="Observando Estado Desconhecido")
             self.telemetry.update_agent_status(
                 state="OBSERVING",
                 objective="Identificando Tela do Jogo",
                 decision="Observando",
-                reason=f"Estado: {snapshot.screen_state.name}",
+                reason=f"Estado: {snapshot.screen_state.name if hasattr(snapshot.screen_state, 'name') else snapshot.screen_state}",
             )
 
         self._consecutive_errors = 0
 
-    def _handle_battle_cycle(self, snapshot: StateSnapshot, frame_before: np.ndarray) -> None:
+    def _handle_battle_cycle(
+        self,
+        snapshot: StateSnapshot,
+        frame_before: np.ndarray,
+        combat_snapshot: Optional[CombatSnapshot] = None,
+    ) -> None:
         """Processa turno de combate inteligente via CombatAgent com visão dinâmica e verificação fechada."""
         if self.mode == "MANUAL":
             self.telemetry.update_agent_status(
@@ -373,23 +445,96 @@ class LumenaBotEngine:
 
         t0 = time.time()
         # Analisa visão dinâmica de combate (N slots de skill, posicionamento, alvos)
-        combat_snapshot = self.combat_vision.analyze_frame(frame_before, timestamp=snapshot.timestamp)
-        turn_res = self.combat_agent.process_combat_snapshot(combat_snapshot, screen_capture_func=self.screen_capture.capture_frame)
+        csnap = combat_snapshot if combat_snapshot is not None else self.combat_vision.analyze_frame(frame_before, timestamp=snapshot.timestamp)
+
+        # Atualiza métricas de combate para a GUI e HealthMonitor
+        self.health_monitor["battle_status"] = "ACTIVE"
+        self.health_monitor["player_detected"] = "YES" if getattr(csnap, "player_detected", True) else "NO"
+        self.health_monitor["player_hp"] = f"{int(csnap.player_hp * 113)} / 113"
+        self.health_monitor["hp_ratio"] = f"{csnap.player_hp * 100:.1f}%"
+        self.health_monitor["crystal_search"] = "BLOCKED"
+        self.health_monitor["crystal_search_blocked"] = True
+        self.health_monitor["skills_detected"] = len(csnap.available_skills)
+        avail_count = sum(1 for s in csnap.available_skills if s.available and s.cooldown <= 0)
+        self.health_monitor["skills_available"] = avail_count
+        self.health_monitor["watchdog"] = "OK"
+
+        if csnap.target_enemy:
+            self.health_monitor["enemy_detected"] = "YES"
+            self.health_monitor["target"] = csnap.target_enemy.name or "ENEMY"
+            self.health_monitor["target_pos"] = csnap.target_enemy.center
+            self.health_monitor["distance"] = round(csnap.target_enemy.distance, 1)
+        else:
+            self.health_monitor["enemy_detected"] = "NO"
+            self.health_monitor["target"] = "NONE"
+
+        # Watchdog de Batalha (Regra dos 5 segundos / Zero Fake Pass)
+        time_since_combat_action = time.time() - self._last_combat_action_time
+        if csnap.target_enemy and (time_since_combat_action > self.combat_action_timeout):
+            self.health_monitor["watchdog"] = "STALLED"
+            if not self._combat_stalled_emitted:
+                self.logger.warning(f"🛑 [WATCHDOG] BATTLE_EXECUTION_STALLED: Batalha ativa sem ação há {time_since_combat_action:.1f}s > {self.combat_action_timeout}s!")
+                self.event_bus.publish(
+                    EventType.BATTLE_EXECUTION_STALLED,
+                    data={
+                        "elapsed": time_since_combat_action,
+                        "target": csnap.target_enemy.name if csnap.target_enemy else "ENEMY",
+                        "foreground": self.input_ctrl.verify_foreground(),
+                        "hwnd": getattr(self.input_ctrl.window_manager._current_target, "hwnd", 0),
+                        "backend": self.input_ctrl.active_backend_name,
+                    },
+                    category="COMBAT",
+                    level="WARNING",
+                    message=f"BATTLE_EXECUTION_STALLED: Nenhuma ação física enviada há {time_since_combat_action:.1f}s. Forçando reaquisição de foco e input.",
+                )
+                self._combat_stalled_emitted = True
+                self.input_ctrl.focus_game_window()
+                self.input_ctrl.window_manager.ensure_canvas_focus(0.5, 0.5)
+
+            if time_since_combat_action > 25.0:
+                self.logger.critical("🛑 [SAFE_STOP] Parada segura acionada por inatividade crítica em combate.")
+                self.event_bus.publish(
+                    EventType.EXECUTION_FAILURE,
+                    data={"reason": "Stall de combate crítico > 25s", "elapsed": time_since_combat_action},
+                    category="SAFETY",
+                    level="CRITICAL",
+                    message="EXECUTION_FAILURE: Combate travado sem resposta de entrada física.",
+                )
+
+        # Executa turno com frame_before real para permitir verificação de delta visual
+        turn_res = self.combat_agent.process_combat_snapshot(
+            csnap,
+            screen_capture_func=self.screen_capture.capture_frame,
+            frame_before=frame_before,
+        )
         t1 = time.time()
 
-        if turn_res.executed_successfully:
+        if turn_res.executed_successfully and turn_res.decision and turn_res.decision.action_type not in ("WAIT", "REASSESS", "NO_ACTION"):
             self._last_physical_action_time = time.time()
+            self._last_combat_action_time = time.time()
             self._stalled_warning_emitted = False
+            self._combat_stalled_emitted = False
+            self.health_monitor["input_dispatched"] = True
+            self.health_monitor["input_requested"] = True
             self.health_monitor["action"] = True
             self.health_monitor["verification"] = True
             self.health_monitor["last_verified_action"] = f"COMBAT_{turn_res.agent_state.name}"
+        else:
+            self.health_monitor["input_dispatched"] = False
+            self.health_monitor["verification"] = False
 
         if turn_res.decision:
             d = turn_res.decision
+            self.health_monitor["decision"] = getattr(d, "action_type", "ATTACK")
             self.health_monitor["last_action"] = getattr(d, "action_type", "ATTACK")
+            if hasattr(d, "selected_skill") and d.selected_skill:
+                self.health_monitor["selected_skill"] = f"#{d.selected_skill.slot_index} ({d.selected_skill.skill_name})"
+            else:
+                self.health_monitor["selected_skill"] = "NONE"
+
             self.telemetry.update_agent_status(
                 state="BATTLE",
-                objective="Lutando contra Inimigo",
+                objective=f"Lutando contra {getattr(csnap.target_enemy, 'name', 'Inimigo')}",
                 decision=f"{getattr(d, 'action_type', 'ACTION')} -> {getattr(d, 'target_name', 'Inimigo')}",
                 reason=getattr(d, "reason", "Decisão de Combate"),
             )
@@ -598,15 +743,17 @@ class LumenaBotEngine:
         except Exception as e:
             self.logger.debug(f"Não foi possível salvar diagnóstico de debug: {e}")
 
-    def _generate_annotated_frame(self, frame, snapshot: StateSnapshot):
-        """Desenha bounding boxes e rótulos semânticos ([PLAYER], [ENEMY], [HP], [FIGHT], [CRYSTAL], [DIALOG]) para a GUI."""
+    def _generate_annotated_frame(self, frame, snapshot: StateSnapshot, combat_snapshot: Optional[Any] = None):
+        """Desenha bounding boxes e rótulos semânticos ([PLAYER], [ENEMY], [HP], [FIGHT], [SKILL], [CRYSTAL], [DIALOG]) para a GUI."""
         annotated = frame.copy()
         h, w = annotated.shape[:2]
 
-        state_text = f"STATE: {snapshot.screen_state.name}"
+        state_name = snapshot.screen_state.name if hasattr(snapshot.screen_state, "name") else str(snapshot.screen_state)
+        state_text = f"STATE: {state_name}"
         cv2.rectangle(annotated, (10, 10), (360, 45), (20, 20, 20), -1)
         cv2.putText(annotated, state_text, (20, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 128), 2)
 
+        # 1. UI Elements do StateSnapshot
         for name, ui in getattr(snapshot, "ui_elements", {}).items():
             score = getattr(ui, "confidence", 1.0)
             bounds = getattr(ui, "bounding_box", None)
@@ -615,5 +762,23 @@ class LumenaBotEngine:
                 tag = f"[{name.upper()}] ({score:.2f})"
                 cv2.rectangle(annotated, (bx, by), (bx + bw, by + bh), (0, 165, 255), 2)
                 cv2.putText(annotated, tag, (bx, max(15, by - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 165, 255), 1)
+
+        # 2. Inimigos do CombatSnapshot
+        if combat_snapshot and getattr(combat_snapshot, "target_enemy", None):
+            e = combat_snapshot.target_enemy
+            if hasattr(e, "bbox") and e.bbox:
+                ex, ey, ew, eh = e.bbox
+                cv2.rectangle(annotated, (ex, ey), (ex + ew, ey + eh), (0, 0, 255), 2)
+                cv2.putText(annotated, f"[ENEMY] {getattr(e, 'name', '')}", (ex, max(15, ey - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+
+        # 3. Slots de Habilidades do CombatSnapshot
+        if combat_snapshot and getattr(combat_snapshot, "available_skills", None):
+            for skill in combat_snapshot.available_skills:
+                sx, sy = getattr(skill, "screen_x", 0), getattr(skill, "screen_y", 0)
+                sw, sh = getattr(skill, "width", 40), getattr(skill, "height", 40)
+                is_avail = getattr(skill, "available", True) and getattr(skill, "cooldown", 0.0) <= 0
+                color = (0, 255, 0) if is_avail else (80, 80, 80)
+                cv2.rectangle(annotated, (sx, sy), (sx + sw, sy + sh), color, 2)
+                cv2.putText(annotated, f"#{skill.slot_index}", (sx + 5, sy + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 1)
 
         return annotated

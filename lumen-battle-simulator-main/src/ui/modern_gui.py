@@ -453,15 +453,50 @@ class ModernLumenaGUI:
         self.battle_skills_text.pack(fill="both", expand=True)
         self._refresh_battle_skills_display()
 
-        # Decision Section
+        # Decision & Real Execution Section
         dec_card = tk.Frame(card, bg=THEME["bg_dark"], padx=14, pady=10, highlightthickness=1, highlightbackground=THEME["border"])
         dec_card.pack(fill="x", pady=(10, 0))
 
-        tk.Label(dec_card, text="🧠 AI COMBAT DECISION (CLOSED-LOOP)", bg=THEME["bg_dark"], fg="#38BDF8", font=(THEME["font_family"], 10, "bold")).pack(anchor="w")
+        tk.Label(dec_card, text="🧠 AI COMBAT DECISION & PHYSICAL EXECUTION (CLOSED-LOOP)", bg=THEME["bg_dark"], fg="#38BDF8", font=(THEME["font_family"], 10, "bold")).pack(anchor="w")
         self.battle_decision_lbl = tk.Label(dec_card, text="Ação: USE_SKILL -> WaterPulse (Slot 1)", bg=THEME["bg_dark"], fg=THEME["text_primary"], font=(THEME["font_family"], 10, "bold"))
         self.battle_decision_lbl.pack(anchor="w", pady=(2, 1))
         self.battle_reason_lbl = tk.Label(dec_card, text="Razão: Super Efetivo (2.0x) vs FOGO | Inimigo Distante -> Ranged Priorizado | Score: 190.0", bg=THEME["bg_dark"], fg=THEME["text_secondary"], font=(THEME["font_family"], 9))
         self.battle_reason_lbl.pack(anchor="w")
+
+        # Telemetry Grid
+        grid_frame = tk.Frame(dec_card, bg=THEME["bg_dark"], pady=6)
+        grid_frame.pack(fill="x", pady=(6, 0))
+
+        self.battle_grid_vars = {}
+        fields = [
+            ("BATTLE", "battle_val", "ACTIVE"),
+            ("HP", "hp_val", "91/113"),
+            ("ENEMY", "enemy_val", "DETECTED"),
+            ("PLAYER", "player_val", "DETECTED"),
+            ("CRYSTAL", "crystal_val", "BLOCKED"),
+            ("SKILLS", "skills_val", "10"),
+            ("AVAILABLE", "avail_val", "6"),
+            ("SELECTED", "selected_val", "SKILL_01"),
+            ("DECISION", "decision_val", "ATTACK"),
+            ("INPUT REQUEST", "in_req_val", "YES"),
+            ("INPUT DISPATCH", "in_disp_val", "YES"),
+            ("ACTION", "action_val", "USE_SKILL"),
+            ("VERIFICATION", "verif_val", "VERIFIED"),
+            ("VISUAL DELTA", "delta_val", "0.0185"),
+            ("WATCHDOG", "watchdog_val", "OK"),
+        ]
+
+        for i, (label_txt, var_key, default_val) in enumerate(fields):
+            row = i // 5
+            col = i % 5
+            cell = tk.Frame(grid_frame, bg=THEME["bg_card"], padx=6, pady=4, highlightthickness=1, highlightbackground=THEME["border"])
+            cell.grid(row=row, column=col, padx=3, pady=3, sticky="nsew")
+            grid_frame.columnconfigure(col, weight=1)
+
+            tk.Label(cell, text=label_txt, bg=THEME["bg_card"], fg=THEME["text_muted"], font=(THEME["font_family"], 7, "bold")).pack(anchor="w")
+            lbl = tk.Label(cell, text=default_val, bg=THEME["bg_card"], fg="#38BDF8", font=("Consolas", 8, "bold"))
+            lbl.pack(anchor="w")
+            self.battle_grid_vars[var_key] = lbl
 
         return page
 
@@ -1239,6 +1274,45 @@ class ModernLumenaGUI:
                 else:
                     self.vision_canvas.delete("all")
                     self.vision_canvas.create_text(320, 180, text="[ NO LIVE FRAME ]", fill="#64748B", font=(THEME["font_family"], 12, "bold"))
+
+            if self.current_page == "battle" and hasattr(self.bot_controller.engine, "health_monitor"):
+                hm = self.bot_controller.engine.health_monitor
+                b_stat = hm.get("battle_status", "INACTIVE")
+                tgt = hm.get("target", "NONE")
+                e_det = hm.get("enemy_detected", "NO")
+                p_hp = hm.get("player_hp", "100 / 113")
+                hp_r = hm.get("hp_ratio", "100.0%")
+                h_req = hm.get("healing_required", "NO")
+                c_src = hm.get("crystal_search", "BLOCKED")
+                sk_det = hm.get("skills_detected", 0)
+                sk_av = hm.get("skills_available", 0)
+                sel_sk = hm.get("selected_skill", "NONE")
+                last_act = hm.get("last_action", "NONE")
+
+                t_info = (
+                    f"STATUS: {b_stat} | INIMIGO: {e_det} | ALVO: {tgt} | "
+                    f"HP: {p_hp} ({hp_r}) | CURA: {h_req} | BUSCA CRISTAL: {c_src}"
+                )
+                self.battle_target_info_lbl.configure(text=t_info)
+                self.battle_decision_lbl.configure(text=f"Ação: {last_act} | Habilidade: {sel_sk}")
+                self.battle_reason_lbl.configure(text=f"Slots Detectados: {sk_det} | Slots Disponíveis: {sk_av} | Modo: {self.bot_controller.engine.mode}")
+
+                if hasattr(self, "battle_grid_vars"):
+                    self.battle_grid_vars["battle_val"].configure(text=str(b_stat))
+                    self.battle_grid_vars["hp_val"].configure(text=f"{p_hp} ({hp_r})")
+                    self.battle_grid_vars["enemy_val"].configure(text="DETECTED" if e_det == "YES" else "NONE")
+                    self.battle_grid_vars["player_val"].configure(text=str(hm.get("player_detected", "DETECTED")))
+                    self.battle_grid_vars["crystal_val"].configure(text=str(c_src))
+                    self.battle_grid_vars["skills_val"].configure(text=str(sk_det))
+                    self.battle_grid_vars["avail_val"].configure(text=str(sk_av))
+                    self.battle_grid_vars["selected_val"].configure(text=str(sel_sk)[:12])
+                    self.battle_grid_vars["decision_val"].configure(text=str(hm.get("decision", "ATTACK"))[:12])
+                    self.battle_grid_vars["in_req_val"].configure(text="YES" if hm.get("input_requested") else "NO")
+                    self.battle_grid_vars["in_disp_val"].configure(text="YES" if hm.get("input_dispatched") else "NO")
+                    self.battle_grid_vars["action_val"].configure(text=str(last_act)[:12])
+                    self.battle_grid_vars["verif_val"].configure(text="VERIFIED" if hm.get("verification") else "UNCONFIRMED")
+                    self.battle_grid_vars["delta_val"].configure(text=f"{hm.get('visual_delta', 0.0):.4f}")
+                    self.battle_grid_vars["watchdog_val"].configure(text=str(hm.get("watchdog", "OK")))
 
             if self.current_page == "memory":
                 mem = self.bot_controller.engine.memory_manager.world_memory

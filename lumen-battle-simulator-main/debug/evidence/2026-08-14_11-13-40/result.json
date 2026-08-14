@@ -1,0 +1,586 @@
+{
+  "target_window_verified": true,
+  "foreground_verified": true,
+  "input_dispatched": true,
+  "visual_change_detected": false,
+  "visual_delta": 0.0,
+  "action_verified": false,
+  "physical_execution_verified": false,
+  "target_type": "OVERWORLD_CHARACTER",
+  "target_confidence": 1.0,
+  "action": "MOVE_W",
+  "failure_reason": "NOT CONFIRMED (Delta abaixo do limiar)",
+  "timestamp": "2026-08-14 11:13:40",
+  "test_id": "LEVEL_6_PHYSICAL_MOVEMENT",
+  "target_window": {
+    "hwnd": 1312830,
+    "pid": 15024,
+    "process_name": "chrome.exe",
+    "title": "Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome",
+    "bounds": [
+      -8,
+      -8,
+      1936,
+      1048
+    ],
+    "is_active": false,
+    "foreground_verified": true,
+    "canvas_detected": true
+  },
+  "input": {
+    "key": "W",
+    "scancode": "0x11",
+    "duration": 0.5,
+    "dispatched": true
+  },
+  "before_frame": "before.png",
+  "after_frame": "after.png",
+  "diff_frame": "diff.png",
+  "events": [
+    {
+      "event_type": "TARGET_WINDOW_DISCOVERY_COMPLETED",
+      "timestamp": 1786720399.0610294,
+      "data": {
+        "count": 22,
+        "valid_count": 2
+      },
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Descoberta concluída: 22 janelas inspecionadas (2 válidas)."
+    },
+    {
+      "event_type": "WINDOW_FOCUS_REQUESTED",
+      "timestamp": 1786720399.0610294,
+      "data": {
+        "hwnd": 1312830,
+        "title": "Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome"
+      },
+      "category": "WINDOW",
+      "level": "DEBUG",
+      "message": "Solicitando primeiro plano para HWND=1312830 ('Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome')"
+    },
+    {
+      "event_type": "WINDOW_FOCUS_VERIFIED",
+      "timestamp": 1786720399.1510348,
+      "data": {
+        "hwnd": 1312830,
+        "foreground_hwnd": 1312830
+      },
+      "category": "WINDOW",
+      "level": "INFO",
+      "message": "WINDOW_FOCUS_VERIFIED: HWND=1312830 confirmado em primeiro plano."
+    },
+    {
+      "event_type": "CANVAS_FOCUS_REQUESTED",
+      "timestamp": 1786720399.2069342,
+      "data": {
+        "normalized_pos": [
+          0.5,
+          0.5
+        ]
+      },
+      "category": "TARGET",
+      "level": "DEBUG",
+      "message": "Solicitando foco no Canvas WebGL via clique em (0.50, 0.50)"
+    },
+    {
+      "event_type": "TARGET_WINDOW_DISCOVERY_STARTED",
+      "timestamp": 1786720399.2069342,
+      "data": {},
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Iniciando descoberta e enumeração de janelas abertas."
+    },
+    {
+      "event_type": "TARGET_WINDOW_DISCOVERY_COMPLETED",
+      "timestamp": 1786720399.2175763,
+      "data": {
+        "count": 22,
+        "valid_count": 2
+      },
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Descoberta concluída: 22 janelas inspecionadas (2 válidas)."
+    },
+    {
+      "event_type": "WINDOW_FOCUS_REQUESTED",
+      "timestamp": 1786720399.2175763,
+      "data": {
+        "hwnd": 1312830,
+        "title": "Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome"
+      },
+      "category": "WINDOW",
+      "level": "DEBUG",
+      "message": "Solicitando primeiro plano para HWND=1312830 ('Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome')"
+    },
+    {
+      "event_type": "WINDOW_FOCUS_VERIFIED",
+      "timestamp": 1786720399.2983975,
+      "data": {
+        "hwnd": 1312830,
+        "foreground_hwnd": 1312830
+      },
+      "category": "WINDOW",
+      "level": "INFO",
+      "message": "WINDOW_FOCUS_VERIFIED: HWND=1312830 confirmado em primeiro plano."
+    },
+    {
+      "event_type": "CANVAS_FOCUS_VERIFIED",
+      "timestamp": 1786720399.3464267,
+      "data": {
+        "click_coords": [
+          960,
+          516
+        ]
+      },
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "CANVAS_FOCUS_VERIFIED: Clique realizado com sucesso em (960, 516)"
+    },
+    {
+      "event_type": "INPUT_REQUESTED",
+      "timestamp": 1786720399.5476122,
+      "data": {
+        "key": "w",
+        "duration": 0.5
+      },
+      "category": "INPUT",
+      "level": "DEBUG",
+      "message": "Input solicitado: W (0.50s)"
+    },
+    {
+      "event_type": "TARGET_WINDOW_DISCOVERY_STARTED",
+      "timestamp": 1786720399.5476122,
+      "data": {},
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Iniciando descoberta e enumeração de janelas abertas."
+    },
+    {
+      "event_type": "TARGET_WINDOW_DISCOVERY_COMPLETED",
+      "timestamp": 1786720399.5549648,
+      "data": {
+        "count": 22,
+        "valid_count": 2
+      },
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Descoberta concluída: 22 janelas inspecionadas (2 válidas)."
+    },
+    {
+      "event_type": "WINDOW_FOCUS_REQUESTED",
+      "timestamp": 1786720399.5549648,
+      "data": {
+        "hwnd": 1312830,
+        "title": "Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome"
+      },
+      "category": "WINDOW",
+      "level": "DEBUG",
+      "message": "Solicitando primeiro plano para HWND=1312830 ('Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome')"
+    },
+    {
+      "event_type": "WINDOW_FOCUS_VERIFIED",
+      "timestamp": 1786720399.6363084,
+      "data": {
+        "hwnd": 1312830,
+        "foreground_hwnd": 1312830
+      },
+      "category": "WINDOW",
+      "level": "INFO",
+      "message": "WINDOW_FOCUS_VERIFIED: HWND=1312830 confirmado em primeiro plano."
+    },
+    {
+      "event_type": "TARGET_FOUND",
+      "timestamp": 1786720399.6363084,
+      "data": {
+        "hwnd": 1312830,
+        "title": "Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome"
+      },
+      "category": "WINDOW",
+      "level": "INFO",
+      "message": "Janela alvo focada: 'Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome' (HWND: 1312830)"
+    },
+    {
+      "event_type": "INPUT_SENT",
+      "timestamp": 1786720399.6583266,
+      "data": {
+        "key": "w",
+        "vk": 87,
+        "scancode": 17,
+        "duration": 0.5
+      },
+      "category": "INPUT",
+      "level": "INFO",
+      "message": "Tecla W despachada (0.50s)"
+    },
+    {
+      "event_type": "TARGET_WINDOW_DISCOVERY_STARTED",
+      "timestamp": 1786720408.161101,
+      "data": {},
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Iniciando descoberta e enumeração de janelas abertas."
+    },
+    {
+      "event_type": "TARGET_WINDOW_DISCOVERY_COMPLETED",
+      "timestamp": 1786720408.161101,
+      "data": {
+        "count": 22,
+        "valid_count": 2
+      },
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Descoberta concluída: 22 janelas inspecionadas (2 válidas)."
+    },
+    {
+      "event_type": "WINDOW_FOCUS_REQUESTED",
+      "timestamp": 1786720408.161101,
+      "data": {
+        "hwnd": 1312830,
+        "title": "Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome"
+      },
+      "category": "WINDOW",
+      "level": "DEBUG",
+      "message": "Solicitando primeiro plano para HWND=1312830 ('Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome')"
+    },
+    {
+      "event_type": "WINDOW_FOCUS_VERIFIED",
+      "timestamp": 1786720408.257188,
+      "data": {
+        "hwnd": 1312830,
+        "foreground_hwnd": 1312830
+      },
+      "category": "WINDOW",
+      "level": "INFO",
+      "message": "WINDOW_FOCUS_VERIFIED: HWND=1312830 confirmado em primeiro plano."
+    },
+    {
+      "event_type": "CANVAS_FOCUS_REQUESTED",
+      "timestamp": 1786720408.316069,
+      "data": {
+        "normalized_pos": [
+          0.5,
+          0.5
+        ]
+      },
+      "category": "TARGET",
+      "level": "DEBUG",
+      "message": "Solicitando foco no Canvas WebGL via clique em (0.50, 0.50)"
+    },
+    {
+      "event_type": "TARGET_WINDOW_DISCOVERY_STARTED",
+      "timestamp": 1786720408.316069,
+      "data": {},
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Iniciando descoberta e enumeração de janelas abertas."
+    },
+    {
+      "event_type": "TARGET_WINDOW_DISCOVERY_COMPLETED",
+      "timestamp": 1786720408.3287795,
+      "data": {
+        "count": 22,
+        "valid_count": 2
+      },
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Descoberta concluída: 22 janelas inspecionadas (2 válidas)."
+    },
+    {
+      "event_type": "WINDOW_FOCUS_REQUESTED",
+      "timestamp": 1786720408.3287795,
+      "data": {
+        "hwnd": 1312830,
+        "title": "Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome"
+      },
+      "category": "WINDOW",
+      "level": "DEBUG",
+      "message": "Solicitando primeiro plano para HWND=1312830 ('Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome')"
+    },
+    {
+      "event_type": "WINDOW_FOCUS_VERIFIED",
+      "timestamp": 1786720408.409913,
+      "data": {
+        "hwnd": 1312830,
+        "foreground_hwnd": 1312830
+      },
+      "category": "WINDOW",
+      "level": "INFO",
+      "message": "WINDOW_FOCUS_VERIFIED: HWND=1312830 confirmado em primeiro plano."
+    },
+    {
+      "event_type": "CANVAS_FOCUS_VERIFIED",
+      "timestamp": 1786720408.462756,
+      "data": {
+        "click_coords": [
+          960,
+          516
+        ]
+      },
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "CANVAS_FOCUS_VERIFIED: Clique realizado com sucesso em (960, 516)"
+    },
+    {
+      "event_type": "INPUT_REQUESTED",
+      "timestamp": 1786720408.6636572,
+      "data": {
+        "key": "w",
+        "duration": 0.5
+      },
+      "category": "INPUT",
+      "level": "DEBUG",
+      "message": "Input solicitado: W (0.50s)"
+    },
+    {
+      "event_type": "TARGET_WINDOW_DISCOVERY_STARTED",
+      "timestamp": 1786720408.6636572,
+      "data": {},
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Iniciando descoberta e enumeração de janelas abertas."
+    },
+    {
+      "event_type": "TARGET_WINDOW_DISCOVERY_COMPLETED",
+      "timestamp": 1786720408.6657116,
+      "data": {
+        "count": 22,
+        "valid_count": 2
+      },
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Descoberta concluída: 22 janelas inspecionadas (2 válidas)."
+    },
+    {
+      "event_type": "WINDOW_FOCUS_REQUESTED",
+      "timestamp": 1786720408.6657116,
+      "data": {
+        "hwnd": 1312830,
+        "title": "Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome"
+      },
+      "category": "WINDOW",
+      "level": "DEBUG",
+      "message": "Solicitando primeiro plano para HWND=1312830 ('Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome')"
+    },
+    {
+      "event_type": "WINDOW_FOCUS_VERIFIED",
+      "timestamp": 1786720408.7472553,
+      "data": {
+        "hwnd": 1312830,
+        "foreground_hwnd": 1312830
+      },
+      "category": "WINDOW",
+      "level": "INFO",
+      "message": "WINDOW_FOCUS_VERIFIED: HWND=1312830 confirmado em primeiro plano."
+    },
+    {
+      "event_type": "TARGET_FOUND",
+      "timestamp": 1786720408.7472553,
+      "data": {
+        "hwnd": 1312830,
+        "title": "Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome"
+      },
+      "category": "WINDOW",
+      "level": "INFO",
+      "message": "Janela alvo focada: 'Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome' (HWND: 1312830)"
+    },
+    {
+      "event_type": "INPUT_SENT",
+      "timestamp": 1786720408.7691362,
+      "data": {
+        "key": "w",
+        "vk": 87,
+        "scancode": 17,
+        "duration": 0.5
+      },
+      "category": "INPUT",
+      "level": "INFO",
+      "message": "Tecla W despachada (0.50s)"
+    },
+    {
+      "event_type": "TARGET_WINDOW_DISCOVERY_STARTED",
+      "timestamp": 1786720420.010922,
+      "data": {},
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Iniciando descoberta e enumeração de janelas abertas."
+    },
+    {
+      "event_type": "TARGET_WINDOW_DISCOVERY_COMPLETED",
+      "timestamp": 1786720420.010922,
+      "data": {
+        "count": 22,
+        "valid_count": 2
+      },
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Descoberta concluída: 22 janelas inspecionadas (2 válidas)."
+    },
+    {
+      "event_type": "WINDOW_FOCUS_REQUESTED",
+      "timestamp": 1786720420.010922,
+      "data": {
+        "hwnd": 1312830,
+        "title": "Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome"
+      },
+      "category": "WINDOW",
+      "level": "DEBUG",
+      "message": "Solicitando primeiro plano para HWND=1312830 ('Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome')"
+    },
+    {
+      "event_type": "WINDOW_FOCUS_VERIFIED",
+      "timestamp": 1786720420.1014493,
+      "data": {
+        "hwnd": 1312830,
+        "foreground_hwnd": 1312830
+      },
+      "category": "WINDOW",
+      "level": "INFO",
+      "message": "WINDOW_FOCUS_VERIFIED: HWND=1312830 confirmado em primeiro plano."
+    },
+    {
+      "event_type": "CANVAS_FOCUS_REQUESTED",
+      "timestamp": 1786720420.156607,
+      "data": {
+        "normalized_pos": [
+          0.5,
+          0.5
+        ]
+      },
+      "category": "TARGET",
+      "level": "DEBUG",
+      "message": "Solicitando foco no Canvas WebGL via clique em (0.50, 0.50)"
+    },
+    {
+      "event_type": "TARGET_WINDOW_DISCOVERY_STARTED",
+      "timestamp": 1786720420.156607,
+      "data": {},
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Iniciando descoberta e enumeração de janelas abertas."
+    },
+    {
+      "event_type": "TARGET_WINDOW_DISCOVERY_COMPLETED",
+      "timestamp": 1786720420.1586163,
+      "data": {
+        "count": 22,
+        "valid_count": 2
+      },
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Descoberta concluída: 22 janelas inspecionadas (2 válidas)."
+    },
+    {
+      "event_type": "WINDOW_FOCUS_REQUESTED",
+      "timestamp": 1786720420.1586163,
+      "data": {
+        "hwnd": 1312830,
+        "title": "Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome"
+      },
+      "category": "WINDOW",
+      "level": "DEBUG",
+      "message": "Solicitando primeiro plano para HWND=1312830 ('Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome')"
+    },
+    {
+      "event_type": "WINDOW_FOCUS_VERIFIED",
+      "timestamp": 1786720420.2400794,
+      "data": {
+        "hwnd": 1312830,
+        "foreground_hwnd": 1312830
+      },
+      "category": "WINDOW",
+      "level": "INFO",
+      "message": "WINDOW_FOCUS_VERIFIED: HWND=1312830 confirmado em primeiro plano."
+    },
+    {
+      "event_type": "CANVAS_FOCUS_VERIFIED",
+      "timestamp": 1786720420.2960947,
+      "data": {
+        "click_coords": [
+          960,
+          516
+        ]
+      },
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "CANVAS_FOCUS_VERIFIED: Clique realizado com sucesso em (960, 516)"
+    },
+    {
+      "event_type": "INPUT_REQUESTED",
+      "timestamp": 1786720420.4967844,
+      "data": {
+        "key": "w",
+        "duration": 0.5
+      },
+      "category": "INPUT",
+      "level": "DEBUG",
+      "message": "Input solicitado: W (0.50s)"
+    },
+    {
+      "event_type": "TARGET_WINDOW_DISCOVERY_STARTED",
+      "timestamp": 1786720420.4967844,
+      "data": {},
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Iniciando descoberta e enumeração de janelas abertas."
+    },
+    {
+      "event_type": "TARGET_WINDOW_DISCOVERY_COMPLETED",
+      "timestamp": 1786720420.498795,
+      "data": {
+        "count": 22,
+        "valid_count": 2
+      },
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Descoberta concluída: 22 janelas inspecionadas (2 válidas)."
+    },
+    {
+      "event_type": "WINDOW_FOCUS_REQUESTED",
+      "timestamp": 1786720420.498795,
+      "data": {
+        "hwnd": 1312830,
+        "title": "Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome"
+      },
+      "category": "WINDOW",
+      "level": "DEBUG",
+      "message": "Solicitando primeiro plano para HWND=1312830 ('Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome')"
+    },
+    {
+      "event_type": "WINDOW_FOCUS_VERIFIED",
+      "timestamp": 1786720420.5794153,
+      "data": {
+        "hwnd": 1312830,
+        "foreground_hwnd": 1312830
+      },
+      "category": "WINDOW",
+      "level": "INFO",
+      "message": "WINDOW_FOCUS_VERIFIED: HWND=1312830 confirmado em primeiro plano."
+    },
+    {
+      "event_type": "TARGET_FOUND",
+      "timestamp": 1786720420.5794153,
+      "data": {
+        "hwnd": 1312830,
+        "title": "Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome"
+      },
+      "category": "WINDOW",
+      "level": "INFO",
+      "message": "Janela alvo focada: 'Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome' (HWND: 1312830)"
+    },
+    {
+      "event_type": "INPUT_SENT",
+      "timestamp": 1786720420.6002064,
+      "data": {
+        "key": "w",
+        "vk": 87,
+        "scancode": 17,
+        "duration": 0.5
+      },
+      "category": "INPUT",
+      "level": "INFO",
+      "message": "Tecla W despachada (0.50s)"
+    }
+  ],
+  "result": "NOT VALIDATED"
+}

@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, Any, Dict, Tuple
 from src.models.enums import Element, Rarity, MoveCategory, CodeTraitGrade, StatusEffect, AgentState
 
 
@@ -314,3 +314,44 @@ class ActionVerificationResult:
     verified: bool = False
     confidence: float = 0.0
     reason: str = ""
+
+
+@dataclass
+class BattleContext:
+    battle_active: bool = False
+    confidence: float = 0.0
+    player_detected: bool = False
+    enemy_detected: bool = False
+    enemy_center: tuple[int, int] = (0, 0)
+    player_center: tuple[int, int] = (0, 0)
+    player_hp: int = 100
+    player_max_hp: int = 100
+    hp_ratio: float = 1.0
+    enemy_hp: int = 100
+    enemy_max_hp: int = 100
+    enemy_hp_ratio: float = 1.0
+    battle_ui_detected: bool = False
+    available_actions: list = field(default_factory=list)
+    timestamp: float = 0.0
+
+
+@dataclass
+class WorldState:
+    battle_active: bool = False
+    player_detected: bool = False
+    enemy_detected: bool = False
+    player_hp: int = 100
+    player_max_hp: int = 100
+    hp_ratio: float = 1.0
+    healing_required: bool = False
+    crystal_detected: bool = False
+    crystal_confidence: float = 0.0
+    enemy_target: Optional[Any] = None
+    available_skills: list = field(default_factory=list)
+    current_skill: Optional[Any] = None
+    player_position: tuple[int, int] = (0, 0)
+    enemy_position: tuple[int, int] = (0, 0)
+    distance: float = 0.0
+    current_state: str = "IDLE"
+    last_action: str = "NONE"
+    last_action_time: float = 0.0

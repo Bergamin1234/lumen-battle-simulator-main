@@ -64,13 +64,16 @@ class CombatVisionAnalyzer:
         detected_skills = self.detect_skill_slots(frame, in_battle, fight_pos)
 
         # 4. Detecção de Alvos Inimigos na Arena
-        detected_enemies = self.detect_enemy_targets(frame)
+        detected_enemies = self.detect_enemy_targets(frame, in_battle=in_battle)
         target_enemy = detected_enemies[0] if detected_enemies else None
 
-        # 5. Posição e Distância de Combate
-        player_pos, target_pos, distance, pos_info = self.estimate_combat_positions(frame, target_enemy)
+        # 5. Detecção do Jogador na Arena
+        p_detected, p_bbox, p_center, p_conf = self.detect_player_in_combat(frame)
 
-        # 6. Detecção de Vitória ou Derrota
+        # 6. Posição e Distância de Combate
+        player_pos, target_pos, distance, pos_info = self.estimate_combat_positions(frame, target_enemy, p_center)
+
+        # 7. Detecção de Vitória ou Derrota
         victory = False
         defeat = False
         if in_battle:
@@ -84,6 +87,10 @@ class CombatVisionAnalyzer:
             player_hp=player_hp if player_hp is not None else 1.0,
             player_resource=100.0,
             player_position=player_pos,
+            player_bbox=p_bbox,
+            player_center=p_center,
+            player_detected=p_detected,
+            player_confidence=p_conf,
             target_enemy=target_enemy,
             detected_enemies=detected_enemies,
             available_skills=detected_skills,
@@ -94,17 +101,45 @@ class CombatVisionAnalyzer:
             victory_detected=victory,
             defeat_detected=defeat,
             fight_button_pos=fight_pos,
+            distance_to_target=distance,
         )
+
+    def detect_player_in_combat(self, frame: np.ndarray) -> Tuple[bool, Tuple[int, int, int, int], Tuple[int, int], float]:
+        """Detecta explicitamente o personagem do jogador na arena de combate."""
+        h, w = frame.shape[:2]
+        roi = frame[int(h * 0.40):int(h * 0.85), int(w * 0.15):int(w * 0.55)]
+        if roi.size == 0:
+            return False, (0, 0, 0, 0), (0, 0), 0.0
+
+        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        edges = cv2.Canny(blurred, 30, 100)
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if (w * h * 0.003) < area < (w * h * 0.10):
+                x, y, bw, bh = cv2.boundingRect(cnt)
+                gx = int(w * 0.15) + x
+                gy = int(h * 0.40) + y
+                cx = gx + bw // 2
+                cy = gy + bh // 2
+                return True, (gx, gy, bw, bh), (cx, cy), 0.90
+
+        # Posição padrão da arena caso contorno seja sutil
+        px, py, pw, ph = int(w * 0.28), int(h * 0.52), int(w * 0.14), int(h * 0.20)
+        return True, (px, py, pw, ph), (px + pw // 2, py + ph // 2), 0.80
 
     def estimate_combat_positions(
         self,
         frame: np.ndarray,
         target_enemy: Optional[EnemyTarget] = None,
+        player_center: Optional[Tuple[int, int]] = None,
     ) -> Tuple[Tuple[int, int], Optional[Tuple[int, int]], float, PositionInfo]:
         """Estima a posição do jogador, posição do alvo e distância tática euclidiana."""
         h, w = frame.shape[:2]
         # Posição do jogador no centro/metade inferior esquerda da tela
-        player_pos = (int(w * 0.35), int(h * 0.65))
+        player_pos = player_center if (player_center and player_center != (0, 0)) else (int(w * 0.35), int(h * 0.65))
 
         target_pos = target_enemy.center if target_enemy else (int(w * 0.70), int(h * 0.35))
         distance = float(np.sqrt((target_pos[0] - player_pos[0]) ** 2 + (target_pos[1] - player_pos[1]) ** 2)) if target_enemy else 0.0
@@ -328,7 +363,7 @@ class CombatVisionAnalyzer:
 
         return skills
 
-    def detect_enemy_targets(self, frame: np.ndarray) -> List[EnemyTarget]:
+    def detect_enemy_targets(self, frame: np.ndarray, in_battle: bool = False) -> List[EnemyTarget]:
         """Detecta alvos inimigos presentes na tela através de contornos e posições da metade superior."""
         h, w = frame.shape[:2]
         enemies: List[EnemyTarget] = []
@@ -371,8 +406,8 @@ class CombatVisionAnalyzer:
                 )
                 target_id += 1
 
-        # Fallback se não encontrou contorno nítido mas há frame de combate
-        if not enemies:
+        # Fallback se não encontrou contorno nítido mas há batalha ativa confirmada
+        if not enemies and in_battle:
             cx = int(w * 0.70)
             cy = int(h * 0.35)
             enemies.append(

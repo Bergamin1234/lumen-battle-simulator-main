@@ -1,0 +1,15 @@
+{
+  "battle_detected": false,
+  "enemy_detected": false,
+  "player_detected": false,
+  "crystal_search_blocked": false,
+  "skills_detected": 0,
+  "skills_available": 0,
+  "decision_made": false,
+  "input_requested": false,
+  "input_dispatched": false,
+  "action_verified": false,
+  "visual_delta": 0.0,
+  "physically_validated": false,
+  "status": "NO_TARGET_WINDOW"
+}

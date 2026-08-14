@@ -146,17 +146,42 @@ class CombatAgent:
             if hasattr(self, "telemetry") and self.telemetry:
                 self.telemetry.record_input_request()
 
+            skill = decision.selected_skill
+            now = time.time()
+            action_id = f"act_{int(now * 1000)}_{skill.slot_index}"
+            target_info = self.skill_executor.input_ctrl.window_manager._current_target
+            target_hwnd = target_info.hwnd if target_info else 0
+            target_pid = getattr(target_info, "pid", 0) if target_info else 0
+
             try:
-                executed_ok, _ = self.skill_executor.execute_skill(decision.selected_skill, frame_before=frame_before)
+                executed_ok, _ = self.skill_executor.execute_skill(skill, frame_before=frame_before)
             except TypeError:
-                executed_ok, _ = self.skill_executor.execute_skill(decision.selected_skill)
+                executed_ok, _ = self.skill_executor.execute_skill(skill)
 
             if executed_ok and hasattr(self, "telemetry") and self.telemetry:
                 self.telemetry.record_input_dispatched()
 
-            # Verificação pós-ação (Action Verification)
+            # Verificação pós-ação em malha fechada (Action Verification)
             self.current_state = CombatAgentState.VERIFYING_ACTION
+            self.event_bus.publish(
+                EventType.ACTION_VERIFICATION_STARTED,
+                data={
+                    "timestamp": time.time(),
+                    "action_id": action_id,
+                    "target_hwnd": target_hwnd,
+                    "target_pid": target_pid,
+                    "state": "BATTLE",
+                    "skill_id": skill.id,
+                    "skill_position": (skill.center_x, skill.center_y),
+                    "input_type": "HOTKEY" if skill.hotkey else "CLICK",
+                },
+                category="COMBAT",
+                level="DEBUG",
+                message=f"ACTION_VERIFICATION_STARTED: Verificando resultado de '{skill.skill_name}'",
+            )
+
             visual_delta = 0.0
+            confirmed = False
             if screen_capture_func:
                 try:
                     time.sleep(0.15)
@@ -167,21 +192,71 @@ class CombatAgent:
                 except Exception as e:
                     self.logger.error(f"Erro na verificação visual pós-ação: {e}")
 
+            # Se a ação foi despachada mas não houve alteração visual ou falhou
             if not executed_ok:
-                skill_id = decision.selected_skill.id or f"skill_slot_{decision.selected_skill.slot_index}"
+                skill_id = skill.id or f"skill_slot_{skill.slot_index}"
                 self._failed_targets_this_battle.add(skill_id)
                 if hasattr(self, "telemetry") and self.telemetry:
                     self.telemetry.record_action_unconfirmed()
                 self.event_bus.publish(
                     EventType.ACTION_UNCONFIRMED,
-                    data={"skill": decision.selected_skill.skill_name, "id": skill_id, "delta": visual_delta},
+                    data={
+                        "timestamp": time.time(),
+                        "action_id": action_id,
+                        "target_hwnd": target_hwnd,
+                        "target_pid": target_pid,
+                        "state": "BATTLE",
+                        "skill_id": skill_id,
+                        "skill_position": (skill.center_x, skill.center_y),
+                        "input_type": "HOTKEY" if skill.hotkey else "CLICK",
+                        "visual_delta": visual_delta,
+                    },
                     category="COMBAT",
                     level="WARNING",
-                    message=f"ACTION_UNCONFIRMED: Ataque '{decision.selected_skill.skill_name}' não confirmado.",
+                    message=f"ACTION_UNCONFIRMED: Ataque '{skill.skill_name}' falhou ou não despachado.",
+                )
+            elif frame_before is not None and not confirmed and visual_delta <= 0.005:
+                # Input despachado mas jogo não alterou nada visualmente
+                skill_id = skill.id or f"skill_slot_{skill.slot_index}"
+                if hasattr(self, "telemetry") and self.telemetry:
+                    self.telemetry.record_action_unconfirmed()
+                self.event_bus.publish(
+                    EventType.ACTION_UNCONFIRMED,
+                    data={
+                        "timestamp": time.time(),
+                        "action_id": action_id,
+                        "target_hwnd": target_hwnd,
+                        "target_pid": target_pid,
+                        "state": "BATTLE",
+                        "skill_id": skill_id,
+                        "skill_position": (skill.center_x, skill.center_y),
+                        "input_type": "HOTKEY" if skill.hotkey else "CLICK",
+                        "visual_delta": visual_delta,
+                    },
+                    category="COMBAT",
+                    level="WARNING",
+                    message=f"ACTION_UNCONFIRMED: Ataque '{skill.skill_name}' despachado sem resposta visual (delta={visual_delta:.4f}).",
                 )
             else:
                 if hasattr(self, "telemetry") and self.telemetry:
                     self.telemetry.record_action_verified()
+                self.event_bus.publish(
+                    EventType.ACTION_VERIFIED,
+                    data={
+                        "timestamp": time.time(),
+                        "action_id": action_id,
+                        "target_hwnd": target_hwnd,
+                        "target_pid": target_pid,
+                        "state": "BATTLE",
+                        "skill_id": skill.id,
+                        "skill_position": (skill.center_x, skill.center_y),
+                        "input_type": "HOTKEY" if skill.hotkey else "CLICK",
+                        "visual_delta": visual_delta,
+                    },
+                    category="COMBAT",
+                    level="INFO",
+                    message=f"ACTION_VERIFIED: Ataque '{skill.skill_name}' confirmado com sucesso (delta={visual_delta:.4f}).",
+                )
 
         elif decision.action_type == "OPEN_FIGHT_MENU" and snapshot.fight_button_pos:
             self.current_state = CombatAgentState.EXECUTING_ACTION
@@ -190,6 +265,7 @@ class CombatAgent:
             executed_ok = self.skill_executor.input_ctrl.click(snapshot.fight_button_pos[0], snapshot.fight_button_pos[1])
             if executed_ok and hasattr(self, "telemetry") and self.telemetry:
                 self.telemetry.record_input_dispatched()
+
         elif decision.action_type in ("CONFIRM_VICTORY", "CLEAR_DEFEAT", "ADVANCE_DIALOG"):
             self.current_state = CombatAgentState.EXECUTING_ACTION
             if hasattr(self, "telemetry") and self.telemetry:
@@ -197,9 +273,18 @@ class CombatAgent:
             executed_ok = self.skill_executor.input_ctrl.click(960, 540)
             if executed_ok and hasattr(self, "telemetry") and self.telemetry:
                 self.telemetry.record_input_dispatched()
-            executed_ok = self.skill_executor.input_ctrl.click(960, 540)
+
         else:
-            executed_ok = True
+            # WAIT, REASSESS, PERCEPTION_FAILURE
+            if decision.reason.startswith("PERCEPTION_FAILURE"):
+                self.event_bus.publish(
+                    EventType.PERCEPTION_FAILURE,
+                    data={"reason": decision.reason},
+                    category="PERCEPTION",
+                    level="WARNING",
+                    message=decision.reason,
+                )
+            executed_ok = False
 
         if executed_ok:
             self.consecutive_turn_failures = 0

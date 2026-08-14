@@ -160,8 +160,9 @@ class StateClassifier:
         if grass_density >= 0.08:
             return AgentState.EXPLORING
 
-        # F. Busca por Área de Farm (Caminhos/Área Aberta)
+        # F. Busca por Área de Farm / Caminhos
         if grass_density < 0.08:
             return AgentState.SEARCHING_FARM
 
-        return AgentState.UNKNOWN_STATE
+        # Fallback seguro para Exploração
+        return AgentState.EXPLORING

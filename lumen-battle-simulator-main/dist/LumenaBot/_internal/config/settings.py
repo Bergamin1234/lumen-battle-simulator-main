@@ -4,6 +4,11 @@ import os
 from typing import List, Dict, Any, Optional
 
 
+CRITICAL_HP_RATIO: float = 0.20
+HEALING_HP_RATIO: float = 0.40
+COMBAT_ACTION_TIMEOUT: float = 5.0
+
+
 @dataclass
 class KeyBindings:
     up: str = "w"
@@ -30,6 +35,9 @@ class BattleConfig:
     attack_delay: float = 0.8
     max_battle_turns: int = 30
     max_action_retries: int = 3
+    critical_hp_ratio: float = 0.20
+    healing_hp_ratio: float = 0.40
+    combat_action_timeout: float = 5.0
 
 
 @dataclass
@@ -50,6 +58,9 @@ class BotConfig:
     attack_delay: float = 0.8
     monitor: int = 1
     battles_before_heal_check: int = 5
+    critical_hp_ratio: float = 0.20
+    healing_hp_ratio: float = 0.40
+    combat_action_timeout: float = 5.0
     keys: KeyBindings = field(default_factory=KeyBindings)
     monitor_cfg: MonitorConfig = field(default_factory=MonitorConfig)
     battle_cfg: BattleConfig = field(default_factory=BattleConfig)

@@ -169,6 +169,10 @@ class TargetWindowManager:
 
         return False, "UNKNOWN"
 
+    def discover_candidates(self, filter_browsers: bool = True) -> List[TargetWindowInfo]:
+        """Alias para list_browser_candidates."""
+        return self.list_browser_candidates()
+
     def list_browser_candidates(self) -> List[TargetWindowInfo]:
         """Enumera todas as janelas ativas do sistema, classificando candidatos válidos e rejeitados."""
         self.event_bus.publish(
@@ -368,6 +372,10 @@ class TargetWindowManager:
         self._current_target = best_candidate
         self.logger.info(f"✓ [TARGET] Janela Alvo Selecionada Automaticamente: '{best_candidate.window_title}' (HWND: {best_candidate.hwnd}, PID: {best_candidate.pid}, Processo: {best_candidate.process_name})")
         return best_candidate
+
+    def get_active_target(self) -> Optional[TargetWindowInfo]:
+        """Retorna o alvo ativo selecionado atualmente."""
+        return self._current_target
 
     def get_window_bounds(self) -> Tuple[int, int, int, int]:
         """Retorna os limites retangulares da janela alvo atual (left, top, width, height)."""

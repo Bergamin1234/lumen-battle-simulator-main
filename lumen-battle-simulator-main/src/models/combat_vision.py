@@ -78,6 +78,10 @@ class SkillSlot:
     max_pp: int = 15
 
     @property
+    def range(self) -> str:
+        return self.range_type
+
+    @property
     def is_available(self) -> bool:
         return self.available and not self.disabled and self.cooldown_ratio < 0.1
 
@@ -133,6 +137,10 @@ class CombatSnapshot:
     player_hp: float = 1.0
     player_resource: float = 100.0
     player_position: Tuple[int, int] = (960, 540)
+    player_bbox: Tuple[int, int, int, int] = (0, 0, 0, 0)
+    player_center: Tuple[int, int] = (960, 540)
+    player_detected: bool = True
+    player_confidence: float = 1.0
     target_enemy: Optional[EnemyTarget] = None
     detected_enemies: List[EnemyTarget] = field(default_factory=list)
     available_skills: List[SkillSlot] = field(default_factory=list)
@@ -146,11 +154,35 @@ class CombatSnapshot:
     fight_button_pos: Optional[Tuple[int, int]] = None
     distance_to_target: float = 0.0
 
+    @property
+    def enemy_bbox(self) -> Tuple[int, int, int, int]:
+        return self.target_enemy.bbox if self.target_enemy else (0, 0, 0, 0)
+
+    @property
+    def enemy_center(self) -> Tuple[int, int]:
+        return self.target_enemy.center if self.target_enemy else (0, 0)
+
+    @property
+    def confidence(self) -> float:
+        return self.target_enemy.confidence if self.target_enemy else (self.player_confidence if self.player_detected else 0.0)
+
+    @property
+    def distance(self) -> float:
+        if self.distance_to_target > 0:
+            return self.distance_to_target
+        if self.position_info and self.position_info.distance > 0:
+            return self.position_info.distance
+        if self.target_enemy and self.target_enemy.distance > 0:
+            return self.target_enemy.distance
+        return 0.0
+
     def __post_init__(self):
         if self.skill_slots and not self.available_skills:
             self.available_skills = self.skill_slots
         if self.distance_to_target > 0 and not self.position_info:
             self.position_info = PositionInfo(distance=self.distance_to_target)
+        if not self.player_center and self.player_position:
+            self.player_center = self.player_position
 
 
 @dataclass

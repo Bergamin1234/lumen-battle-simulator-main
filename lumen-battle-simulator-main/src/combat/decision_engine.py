@@ -98,12 +98,31 @@ class CombatDecisionEngine:
                 confidence=0.9,
             )
 
+        # 4. Validação de Percepção de Alvo e Jogador (Evita Ataques Cegos)
+        if snapshot.in_battle:
+            if not snapshot.target_enemy:
+                self.logger.warning("⚠️ [PERCEPTION_FAILURE] Alvo inimigo não detectado na arena.")
+                return CombatDecision(
+                    action_type="WAIT",
+                    reason="PERCEPTION_FAILURE: ENEMY_NOT_DETECTED (Ataque cego evitado)",
+                    score=0.0,
+                    confidence=0.0,
+                )
+            if not getattr(snapshot, "player_detected", True):
+                self.logger.warning("⚠️ [PERCEPTION_FAILURE] Jogador não detectado na arena.")
+                return CombatDecision(
+                    action_type="WAIT",
+                    reason="PERCEPTION_FAILURE: PLAYER_NOT_DETECTED (Ataque cego evitado)",
+                    score=0.0,
+                    confidence=0.0,
+                )
+
         target = snapshot.target_enemy
         target_elem = (target.element if target else Element.NORMAL) or Element.NORMAL
         player_pos = snapshot.player_position or (960, 540)
         target_pos = target.center if target else None
 
-        # 4. Avaliação de Habilidades Dinâmicas (Scoring Formula)
+        # 5. Avaliação de Habilidades Dinâmicas (Scoring Formula)
         candidates: List[Tuple[SkillSlot, float, str]] = []
 
         for skill in snapshot.available_skills:
@@ -213,7 +232,7 @@ class CombatDecisionEngine:
         return CombatDecision(
             action_type="WAIT",
             target_pos=(960, 540),
-            reason="Aguardando animação ou recarga de habilidades.",
+            reason="NO_SKILL_AVAILABLE: Aguardando animação ou recarga de habilidades.",
             score=0.0,
             confidence=0.5,
         )

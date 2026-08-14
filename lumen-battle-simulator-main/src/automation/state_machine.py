@@ -41,7 +41,7 @@ class BotStateMachine:
 
         # Tabela de transições permitidas
         self._allowed_transitions: Dict[BotState, Set[BotState]] = {
-            BotState.IDLE: {BotState.STARTING, BotState.INITIALIZING, BotState.MANUAL, BotState.EMERGENCY_STOP},
+            BotState.IDLE: {BotState.STARTING, BotState.INITIALIZING, BotState.MANUAL, BotState.EMERGENCY_STOP, BotState.OBSERVING, BotState.EXPLORING, BotState.BATTLE, BotState.HEALING, BotState.DIALOG},
             BotState.STARTING: {BotState.INITIALIZING, BotState.FOCUSING, BotState.OBSERVING, BotState.ERROR, BotState.STOPPING, BotState.EMERGENCY_STOP},
             BotState.INITIALIZING: {BotState.FOCUSING, BotState.OBSERVING, BotState.RECOVERING, BotState.ERROR, BotState.STOPPING, BotState.EMERGENCY_STOP},
             BotState.FOCUSING: {BotState.OBSERVING, BotState.EXPLORING, BotState.RECOVERING, BotState.ERROR, BotState.STOPPING, BotState.EMERGENCY_STOP},
