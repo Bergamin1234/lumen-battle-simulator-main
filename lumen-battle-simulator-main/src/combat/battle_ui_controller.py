@@ -88,20 +88,21 @@ class BattleUIController:
 
         # 2. Valida se as coordenadas estão dentro dos limites da janela/canvas
         bounds = self.input_ctrl.window_manager.get_window_bounds()
-        wx, wy, ww, wh = bounds
-        if ww > 0 and wh > 0:
-            if not (wx <= target_x <= wx + ww and wy <= target_y <= wy + wh):
-                self.logger.warning(
-                    f"🛑 [INPUT GUARD] Coordenadas ({target_x}, {target_y}) fora dos limites da janela: {bounds}"
-                )
-                self.event_bus.publish(
-                    EventType.INPUT_GUARD_REJECTED,
-                    data={"target_coords": (target_x, target_y), "window_bounds": bounds, "reason": "COORDS_OUT_OF_BOUNDS"},
-                    category="SAFETY",
-                    level="WARNING",
-                    message="INPUT_GUARD_REJECTED: Coordenadas fora da janela do jogo.",
-                )
-                return False
+        if bounds and isinstance(bounds, (tuple, list)) and len(bounds) == 4:
+            wx, wy, ww, wh = bounds
+            if ww > 0 and wh > 0:
+                if not (wx <= target_x <= wx + ww and wy <= target_y <= wy + wh):
+                    self.logger.warning(
+                        f"🛑 [INPUT GUARD] Coordenadas ({target_x}, {target_y}) fora dos limites da janela: {bounds}"
+                    )
+                    self.event_bus.publish(
+                        EventType.INPUT_GUARD_REJECTED,
+                        data={"target_coords": (target_x, target_y), "window_bounds": bounds, "reason": "COORDS_OUT_OF_BOUNDS"},
+                        category="SAFETY",
+                        level="WARNING",
+                        message="INPUT_GUARD_REJECTED: Coordenadas fora da janela do jogo.",
+                    )
+                    return False
 
         return True
 
@@ -335,25 +336,29 @@ class BattleUIController:
         v_delta = 0.0
 
         if screen_capture_func and frame is not None:
-            # Polling visual dinâmico com timeout de 1.5s
-            def is_modal_closed(f_check: np.ndarray) -> bool:
-                r = self.ui_detector.analyze_battle_ui(f_check)
-                return not r.modal_detected
-
-            success, frame_after = self.wait_for_visual_condition(
-                is_modal_closed,
-                screen_capture_func=screen_capture_func,
-                timeout=1.5,
-                interval=0.04,
-            )
-            if frame_after is not None:
-                _, v_delta = self.input_ctrl.compute_visual_delta(frame, frame_after)
-                verified = True
-            else:
+            # Polling visual dinâmico com envio de SPACE a cada 250ms até fechar todos os modais/diálogos
+            start_poll = time.time()
+            while time.time() - start_poll < 2.5:
+                time.sleep(0.250)
                 frame_after, _ = screen_capture_func()
                 if frame_after is not None:
-                    _, v_delta = self.input_ctrl.compute_visual_delta(frame, frame_after)
+                    r_check = self.ui_detector.analyze_battle_ui(frame_after)
+                    if not r_check.modal_detected:
+                        verified = True
+                        _, v_delta = self.input_ctrl.compute_visual_delta(frame, frame_after)
+                        break
+                    else:
+                        # Repete tecla SPACE para avançar diálogos em cadeia
+                        self.input_ctrl.press_key("space", duration=0.10)
+                        if r_check.modal_confirm_button and r_check.modal_confirm_button.is_present:
+                            self.input_ctrl.click(*r_check.modal_confirm_button.center)
+            if not verified:
+                f_last, _ = screen_capture_func()
+                if f_last is not None:
+                    _, v_delta = self.input_ctrl.compute_visual_delta(frame, f_last)
                     verified = v_delta >= 0.004
+        else:
+            verified = dispatched
 
         self.event_bus.publish(
             EventType.MODAL_DISMISSED,

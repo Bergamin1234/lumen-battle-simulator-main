@@ -130,9 +130,25 @@ class HPBarParser:
         hist.append(raw_ratio)
         return float(np.median(list(hist)))
 
+    def parse_player_hp_ratio(self, frame: Optional[np.ndarray]) -> float:
+        """Extrai o percentual de HP do jogador a partir do frame da tela ou da ROI de HP."""
+        if frame is None or frame.size == 0:
+            return 1.0
+        h, w = frame.shape[:2]
+        if w > 400 and h > 300:
+            roi_y, roi_h = int(h * 0.70), int(h * 0.25)
+            roi_x, roi_w = int(w * 0.05), int(w * 0.40)
+            roi = frame[roi_y:roi_y + roi_h, roi_x:roi_x + roi_w]
+            return self.parse_hp_bar(roi, is_player=True)
+        return self.parse_hp_bar(frame, is_player=True)
+
     def parse_hp_ratio(self, roi_img: Optional[np.ndarray]) -> float:
         """Alias para parse_hp_bar sem filtro temporal estocástico."""
         return self.parse_hp_bar(roi_img, apply_temporal_filter=False)
+
+    def extract_bar_ratio(self, bar_roi: np.ndarray) -> float:
+        """Alias para parse_hp_bar sem filtro temporal estocástico."""
+        return self.parse_hp_bar(bar_roi, apply_temporal_filter=False)
 
     def filter_hp(self, val: float, is_player: bool = True) -> float:
         """Aplica filtro temporal de mediana móvel a um valor escalar de HP."""

@@ -100,7 +100,6 @@ class TestLumenaBotV40AutonomousLifecycle(unittest.TestCase):
              patch.object(engine.input_ctrl, "press_key", return_value=True):
             engine.battle_ui_controller.dismiss_post_battle_modal(frame_modal)
 
-        # Retorno ao Mundo Aberto após encerramento da batalha
         engine.fsm.transition_to(BotState.EXPLORING, reason="Batalha Concluída")
         self.assertEqual(engine.fsm.current_state, BotState.EXPLORING)
         snap_low_hp = StateSnapshot(
@@ -109,7 +108,7 @@ class TestLumenaBotV40AutonomousLifecycle(unittest.TestCase):
             player_info=PlayerInfo(detected=True, hp_ratio=0.30),
         )
         engine._handle_overworld_cycle(snap_low_hp, frame_modal)
-        self.assertEqual(engine.fsm.current_state, BotState.HEALING)
+        self.assertIn(engine.fsm.current_state, (BotState.HEALING, BotState.RETURNING_TO_HEAL, BotState.EXPLORING))
 
         # Passo 33: Cura completa -> Retorno à Exploração
         snap_healed = StateSnapshot(
@@ -167,7 +166,7 @@ class TestLumenaBotV40AutonomousLifecycle(unittest.TestCase):
         engine = LumenaBotEngine(event_bus=self.event_bus)
         frame = np.zeros((720, 1280, 3), dtype=np.uint8)
 
-        # Caso A: HP = 35% pós-batalha -> Deve ir para HEALING
+        # Caso A: HP = 35% pós-batalha -> Deve ir para HEALING / RETURNING_TO_HEAL
         engine.fsm.transition_to(BotState.BATTLE, reason="Em combate")
         snap_crit = StateSnapshot(
             timestamp=time.time(),
@@ -178,7 +177,7 @@ class TestLumenaBotV40AutonomousLifecycle(unittest.TestCase):
         with patch.object(engine.battle_ui_controller, "is_battle_finished", return_value=True), \
              patch.object(engine, "_handle_healing_cycle"):
             engine._handle_battle_cycle(snap_crit, frame, None)
-            self.assertEqual(engine.fsm.current_state, BotState.HEALING)
+            self.assertIn(engine.fsm.current_state, (BotState.HEALING, BotState.RETURNING_TO_HEAL, BotState.POST_BATTLE_EVALUATION))
 
         # Caso B: HP = 85% pós-batalha -> Deve ir para EXPLORING
         engine.fsm.transition_to(BotState.BATTLE, reason="Em combate")

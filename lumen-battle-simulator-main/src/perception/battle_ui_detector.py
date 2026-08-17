@@ -346,18 +346,21 @@ class BattleUIDetector:
 
             contours, _ = cv2.findContours(mask_hp, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             for cnt in contours:
+                area = cv2.contourArea(cnt)
                 cx_l, cy_l, cw_l, ch_l = cv2.boundingRect(cnt)
-                aspect = cw_l / max(1, ch_l)
-                if aspect >= 2.5 and cw_l >= 30:
-                    gx = hx + cx_l
-                    gy = hy + cy_l
-                    return BattleUIElement(
-                        name="ENEMY_HP",
-                        bbox=(gx, gy, cw_l, ch_l),
-                        center=(gx + cw_l // 2, gy + ch_l // 2),
-                        confidence=0.88,
-                        is_present=True,
-                    )
+                # Uma barra de vida real é delgada (altura 4px a 40px, largura 30px a 400px, área < 15% da ROI)
+                if (4 <= ch_l <= 40) and (30 <= cw_l <= 400) and (area < hw * hh * 0.15):
+                    aspect = cw_l / max(1, ch_l)
+                    if aspect >= 2.5:
+                        gx = hx + cx_l
+                        gy = hy + cy_l
+                        return BattleUIElement(
+                            name="ENEMY_HP",
+                            bbox=(gx, gy, cw_l, ch_l),
+                            center=(gx + cw_l // 2, gy + ch_l // 2),
+                            confidence=0.88,
+                            is_present=True,
+                        )
 
         return BattleUIElement(name="ENEMY_HP", confidence=0.0, is_present=False)
 
@@ -648,3 +651,27 @@ class BattleUIDetector:
             )
 
         return result
+
+    def is_battle_visually_confirmed(
+        self,
+        frame: Optional[np.ndarray],
+        canvas_bounds: Optional[Tuple[int, int, int, int]] = None,
+    ) -> bool:
+        """
+        Verificação visual estrita da Arena de Batalha (Zero Guesswork / Direct Visual Gating).
+        Retorna True se e somente se:
+        1. O botão FIGHT estiver presente com confiança real na Sub-ROI inferior direita; OU
+        2. O menu de habilidades estiver aberto; OU
+        3. A barra de HP do inimigo e/ou jogador estiverem detectadas ativas na arena; OU
+        4. Um modal pós-combate estiver ativo (Victory/Level Up/Loot).
+        Retorna False se o frame for do Overworld (apenas mato/cenário) para manter oscilação A/D contínua.
+        """
+        if frame is None or frame.size == 0:
+            return False
+
+        res = self.analyze_battle_ui(frame, canvas_bounds=canvas_bounds)
+        has_fight = bool(res.fight_button and res.fight_button.is_present and res.fight_button.confidence >= 0.50)
+        has_skills = bool(res.skill_menu_open)
+        has_enemy_hp = bool(res.enemy_hp_bar and res.enemy_hp_bar.is_present and res.enemy_hp_bar.confidence >= 0.50)
+        has_modal = bool(res.modal_detected)
+        return bool(has_fight or has_skills or has_enemy_hp or has_modal)

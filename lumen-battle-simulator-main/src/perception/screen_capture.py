@@ -144,7 +144,13 @@ class ScreenCapture:
 
                 return frame_bgr, timestamp
             except Exception as e:
-                self.logger.error(f"Erro durante captura de tela MSS: {e}")
+                self.logger.debug(f"Aviso durante captura MSS: {e}")
+                try:
+                    if self._sct is not None:
+                        self._sct.close()
+                except Exception:
+                    pass
+                self._sct = None
                 return None, timestamp
 
     @staticmethod

@@ -286,6 +286,10 @@ class InputController:
         finally:
             self.release_all_keys()
 
+    def release_all_movement_keys(self) -> None:
+        """Força liberação de todas as teclas direcionais (W, A, S, D, SPACE)."""
+        self.release_all_keys()
+
     def press_key(self, key: str, duration: float = 0.15, jitter: bool = True) -> bool:
         """Pressiona uma tecla com proteção e liberação garantida."""
         diag = self.press_key_with_diagnostic(key, duration=duration, jitter=jitter)

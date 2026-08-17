@@ -7,6 +7,7 @@ from .lumen import (
     UIElement,
     MoveSlotInfo,
     BattleTelemetry,
+    PlayerInfo,
     StateSnapshot,
     LumenMemberState,
     TeamStatus,

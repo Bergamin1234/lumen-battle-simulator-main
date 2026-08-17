@@ -49,11 +49,11 @@ THEME = {
 
 
 class ModernLumenaGUI:
-    """Painel de Controle Profissional (Control Center) de 14 Páginas para o Lumena Bot."""
+    """Painel de Controle Profissional (Control Center) de 14 Páginas para o Lumena Bot Master v5.0."""
 
     def __init__(self, root: tk.Tk, config: Optional[BotConfig] = None) -> None:
         self.root = root
-        self.root.title("Lumena Bot Control Center — Autonomous Agent Suite")
+        self.root.title("Lumena Bot [MASTER v5.0] — Autonomous Industrial Suite")
         self.root.geometry("1420x920")
         self.root.minsize(1240, 800)
         self.root.configure(bg=THEME["bg_dark"])
@@ -114,7 +114,7 @@ class ModernLumenaGUI:
         title_box = tk.Frame(self.header_frame, bg=THEME["bg_sidebar"])
         title_box.pack(side="left", padx=16, pady=8)
         tk.Label(title_box, text="⚡ LUMENA BOT", bg=THEME["bg_sidebar"], fg=THEME["text_primary"], font=(THEME["font_family"], 13, "bold")).pack(side="left")
-        tk.Label(title_box, text="CONTROL CENTER v3.0", bg=THEME["bg_card_alt"], fg="#38BDF8", font=(THEME["font_family"], 8, "bold"), padx=6, pady=2).pack(side="left", padx=8)
+        tk.Label(title_box, text="MASTER v5.0", bg=THEME["bg_card_alt"], fg="#10B981", font=(THEME["font_family"], 8, "bold"), padx=6, pady=2).pack(side="left", padx=8)
 
         self.target_window_badge = tk.Label(
             self.header_frame,
@@ -1487,8 +1487,9 @@ class ModernLumenaGUI:
 
                 frame = self.bot_controller.get_latest_frame()
                 if frame is not None:
-                    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    im = Image.fromarray(rgb).resize((520, 290))
+                    resized = cv2.resize(frame, (520, 290), interpolation=cv2.INTER_LINEAR)
+                    rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+                    im = Image.fromarray(rgb)
                     self._dash_preview_img_tk = ImageTk.PhotoImage(im)
                     self.dash_canvas.delete("all")
                     self.dash_canvas.create_image(0, 0, anchor="nw", image=self._dash_preview_img_tk)
@@ -1499,8 +1500,9 @@ class ModernLumenaGUI:
             if self.current_page == "live_game":
                 frame = self.bot_controller.get_latest_frame()
                 if frame is not None:
-                    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    im = Image.fromarray(rgb).resize((800, 450))
+                    resized = cv2.resize(frame, (800, 450), interpolation=cv2.INTER_LINEAR)
+                    rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+                    im = Image.fromarray(rgb)
                     self._live_game_img_tk = ImageTk.PhotoImage(im)
                     self.live_game_canvas.delete("all")
                     self.live_game_canvas.create_image(0, 0, anchor="nw", image=self._live_game_img_tk)
@@ -1511,16 +1513,9 @@ class ModernLumenaGUI:
             if self.current_page == "vision":
                 frame = self.bot_controller.get_latest_frame()
                 if frame is not None:
-                    hm = getattr(self.bot_controller.engine, "health_monitor", {})
-                    cb = hm.get("canvas_bounds", (0, 0, 1920, 1080))
-                    lb = hm.get("is_letterboxed", False)
-                    calib_frame = self.canvas_inspector.project_rois_to_frame(
-                        frame=frame,
-                        canvas_bounds=cb,
-                        is_letterboxed=lb,
-                    )
-                    rgb = cv2.cvtColor(calib_frame, cv2.COLOR_BGR2RGB)
-                    im = Image.fromarray(rgb).resize((640, 360))
+                    resized = cv2.resize(frame, (640, 360), interpolation=cv2.INTER_LINEAR)
+                    rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+                    im = Image.fromarray(rgb)
                     self._vision_img_tk = ImageTk.PhotoImage(im)
                     self.vision_canvas.delete("all")
                     self.vision_canvas.create_image(0, 0, anchor="nw", image=self._vision_img_tk)
@@ -1533,7 +1528,7 @@ class ModernLumenaGUI:
                 b_stat = hm.get("battle_status", "INACTIVE")
                 tgt = hm.get("target", "NONE")
                 e_det = hm.get("enemy_detected", "NO")
-                p_hp = hm.get("player_hp", "100 / 113")
+                p_hp = hm.get("player_hp", "100%")
                 hp_r = hm.get("hp_ratio", "100.0%")
                 h_req = hm.get("healing_required", "NO")
                 c_src = hm.get("crystal_search", "BLOCKED")

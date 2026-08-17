@@ -1,6 +1,6 @@
 """
-LUMENA BOT CONTROL CENTER v4.4 — MAIN ENTRYPOINT
-===============================================
+LUMENA BOT [MASTER v5.0] — MAIN ENTRYPOINT
+==========================================
 Ponto de entrada unificado para execução gráfica (GUI) ou linha de comando (CLI/Field Trial).
 """
 
@@ -12,7 +12,7 @@ import logging
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="LumenaBot",
-        description="Lumena Bot Control Center v5.0 — Autonomous Industrial Master Suite",
+        description="Lumena Bot [MASTER v5.0] — Autonomous Industrial Suite",
     )
     parser.add_argument("--version", action="store_true", help="Exibe a versão atual do sistema e encerra")
     parser.add_argument("--cli", action="store_true", help="Executa o motor central em modo linha de comando (sem GUI)")
@@ -24,7 +24,7 @@ def main() -> None:
     args, unknown = parser.parse_known_args()
 
     if args.version:
-        print("Lumena Bot Control Center v4.4 / v5.0 Master Industrial — Autonomous Industrial Master Suite")
+        print("LUMENA BOT [MASTER v5.0] (Lumena Bot Control Center v4.4 / v5.0) — Autonomous Industrial Suite")
         print("Build: v5.0 Master Industrial | Python 3.12 | Win32 API WebGL Engine")
         sys.exit(0)
 
