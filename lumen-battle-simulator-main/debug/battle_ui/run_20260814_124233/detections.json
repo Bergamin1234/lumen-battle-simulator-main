@@ -1,0 +1,92 @@
+{
+  "timestamp": 1786725753.736604,
+  "battle_ui_confirmed": true,
+  "battle_ui_score": 0.692,
+  "skill_menu_open": false,
+  "elements": {
+    "FIGHT": {
+      "present": true,
+      "bbox": [
+        900,
+        520,
+        201,
+        81
+      ],
+      "center": [
+        1000,
+        560
+      ],
+      "confidence": 0.95
+    },
+    "RUN": {
+      "present": false,
+      "bbox": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "center": [
+        1126,
+        648
+      ],
+      "confidence": 0.0
+    },
+    "TEAM": {
+      "present": false,
+      "bbox": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "center": [
+        896,
+        648
+      ],
+      "confidence": 0.0
+    },
+    "BAG": {
+      "present": false,
+      "bbox": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "center": [
+        1126,
+        540
+      ],
+      "confidence": 0.0
+    },
+    "ENEMY_HP": {
+      "present": true,
+      "bbox": [
+        700,
+        80,
+        351,
+        31
+      ],
+      "center": [
+        875,
+        95
+      ],
+      "confidence": 0.88
+    },
+    "SKILL_1": {
+      "present": true,
+      "bbox": [
+        899,
+        519,
+        202,
+        82
+      ],
+      "center": [
+        1000,
+        560
+      ],
+      "confidence": 0.85
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "physically_validated": false,
+  "status": "NO_TARGET_WINDOW",
+  "battle_detected": false,
+  "fight_clicked": false,
+  "skill_executed": false,
+  "turn_resolution_completed": false,
+  "battle_finished": false,
+  "visual_delta": 0.0
+}

@@ -1,0 +1,21 @@
+{
+  "timestamp": 1786725846.0173376,
+  "world_mode": {
+    "crystal_detector_active": true,
+    "crystal_detected": true,
+    "confidence": 0.9654851485148515,
+    "status": "ALLOWED"
+  },
+  "battle_mode": {
+    "battle_ui_confirmed": true,
+    "crystal_detector_active": false,
+    "crystal_detected": false,
+    "crystal_search": "BLOCKED",
+    "status": "DISABLED_IN_BATTLE"
+  },
+  "validation": {
+    "crystal_blocked_in_battle": true,
+    "crystal_allowed_in_world": true,
+    "pass": true
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "events": [
+    {
+      "timestamp": 1786727201.6685913,
+      "type": "TARGET_WINDOW_DISCOVERY_STARTED",
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Iniciando descoberta e enumeração de janelas abertas.",
+      "data": {}
+    },
+    {
+      "timestamp": 1786727201.6685913,
+      "type": "TARGET_WINDOW_DISCOVERY_COMPLETED",
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Descoberta concluída: 0 janelas inspecionadas (0 válidas).",
+      "data": {
+        "count": 0,
+        "valid_count": 0
+      }
+    },
+    {
+      "timestamp": 1786727202.6695197,
+      "type": "TARGET_WINDOW_DISCOVERY_STARTED",
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Iniciando descoberta e enumeração de janelas abertas.",
+      "data": {}
+    },
+    {
+      "timestamp": 1786727202.6695197,
+      "type": "TARGET_WINDOW_DISCOVERY_COMPLETED",
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Descoberta concluída: 0 janelas inspecionadas (0 válidas).",
+      "data": {
+        "count": 0,
+        "valid_count": 0
+      }
+    },
+    {
+      "timestamp": 1786727203.6699584,
+      "type": "TARGET_WINDOW_DISCOVERY_STARTED",
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Iniciando descoberta e enumeração de janelas abertas.",
+      "data": {}
+    },
+    {
+      "timestamp": 1786727203.6699584,
+      "type": "TARGET_WINDOW_DISCOVERY_COMPLETED",
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Descoberta concluída: 0 janelas inspecionadas (0 válidas).",
+      "data": {
+        "count": 0,
+        "valid_count": 0
+      }
+    },
+    {
+      "timestamp": 1786727204.6704664,
+      "type": "TARGET_WINDOW_DISCOVERY_STARTED",
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Iniciando descoberta e enumeração de janelas abertas.",
+      "data": {}
+    },
+    {
+      "timestamp": 1786727204.6704664,
+      "type": "TARGET_WINDOW_DISCOVERY_COMPLETED",
+      "category": "TARGET",
+      "level": "INFO",
+      "message": "Descoberta concluída: 0 janelas inspecionadas (0 válidas).",
+      "data": {
+        "count": 0,
+        "valid_count": 0
+      }
+    }
+  ],
+  "target": null
+}

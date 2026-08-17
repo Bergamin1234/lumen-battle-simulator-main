@@ -24,21 +24,27 @@ from src.automation.navigation import NavigationController
 from src.automation.state_machine import BotState, BotStateMachine
 from src.telemetry.telemetry_manager import TelemetryManager
 from src.core.event_bus import EventBus, EventType
+from src.perception.battle_ui_detector import BattleUIDetector, BattleUIDetectionResult
+from src.combat.battle_ui_controller import BattleUIController
 
 logger = logging.getLogger("LumenaMacro")
 
 
 class LumenaBotEngine:
-    """Motor unificado de ciclo contínuo em malha fechada (Closed Loop) para o Lumena Bot."""
+    """Motor central autônomo e determinístico do Lumena Bot Control Center v3.7."""
 
-    def __init__(self, config: Optional[BotConfig] = None) -> None:
-        self.logger = logging.getLogger("LumenaMacro")
+    def __init__(
+        self,
+        config: Optional[BotConfig] = None,
+        event_bus: Optional[EventBus] = None,
+    ) -> None:
+        self.logger = logging.getLogger("LumenaBotEngine")
         self.config = config or BotConfig(
             keys=KeyBindings(),
             monitor_cfg=MonitorConfig(),
             battle_cfg=BattleConfig(),
         )
-        self.event_bus = EventBus()
+        self.event_bus = event_bus or EventBus()
         self.fsm = BotStateMachine(initial_state=BotState.IDLE)
         self.telemetry = TelemetryManager()
 
@@ -66,6 +72,24 @@ class LumenaBotEngine:
             input_ctrl=self.input_ctrl,
         )
 
+        # v3.7 & v3.8 Battle UI Controller & Detector
+        self.battle_ui_detector = BattleUIDetector(event_bus=self.event_bus)
+        self.battle_ui_controller = BattleUIController(
+            input_controller=self.input_ctrl,
+            ui_detector=self.battle_ui_detector,
+            event_bus=self.event_bus,
+        )
+        self.battle_action_deadline = 2.0
+        self.battle_observation_without_action = 0
+
+        # v3.9 Emergency Killswitch & Safety
+        from src.input.killswitch import EmergencyKillswitch
+        self.killswitch = EmergencyKillswitch(
+            event_bus=self.event_bus,
+            state_machine=self.fsm,
+            release_keys_callback=lambda: self.input_ctrl.backend.release_all_keys() if hasattr(self.input_ctrl, "backend") and hasattr(self.input_ctrl.backend, "release_all_keys") else None,
+        )
+
         # Modos de Execução: 'AUTONOMOUS', 'ASSISTED', 'MANUAL'
         self.mode = "AUTONOMOUS"
         self._running = False
@@ -81,17 +105,20 @@ class LumenaBotEngine:
         self._last_combat_action_time = time.time()
         self._stalled_warning_emitted = False
         self._combat_stalled_emitted = False
-        self.critical_hp_ratio = getattr(self.config, "critical_hp_ratio", 0.20)
+        self.critical_hp_ratio = getattr(self.config, "critical_hp_ratio", 0.40)
         self.healing_hp_ratio = getattr(self.config, "healing_hp_ratio", 0.40)
         self.combat_action_timeout = getattr(self.config, "combat_action_timeout", 5.0)
 
         self.health_monitor: Dict[str, Any] = {
             "state": "STOPPED",
             "battle_status": "INACTIVE",
+            "battle_ui": "INACTIVE",
+            "fight": "NOT_FOUND",
             "enemy_detected": "NO",
             "player_hp": "100 / 100",
             "hp_ratio": "100.0%",
             "healing_required": "NO",
+            "crystal": "BLOCKED",
             "crystal_search": "BLOCKED",
             "crystal_search_blocked": True,
             "skills_detected": 0,
@@ -113,6 +140,7 @@ class LumenaBotEngine:
             "action_result": "NONE",
             "last_action": "NONE",
             "time_since_last_action": 0.0,
+            "watchdog": "OK",
             # Legacy aliases
             "perception": True,
             "action": True,
@@ -182,12 +210,14 @@ class LumenaBotEngine:
             self.logger.warning("⚠️ Nenhuma janela do jogo detectada. O bot aguardará a abertura do navegador.")
             self.fsm.transition_to(BotState.OBSERVING, reason="Aguardando janela alvo")
 
+        self.killswitch.start_listening()
         self.logger.info(f"🚀 LumenaBotEngine iniciado no modo: {self.mode}")
         return True
 
     def stop(self) -> None:
         """Para a execução do motor de forma segura."""
         self.logger.info("🛑 Parando LumenaBotEngine...")
+        self.killswitch.stop_listening()
         self.fsm.transition_to(BotState.STOPPING, reason="Comando de Parada")
         self._running = False
         self._paused = False
@@ -427,6 +457,37 @@ class LumenaBotEngine:
 
         self._consecutive_errors = 0
 
+    def resolve_high_level_state(
+        self,
+        snapshot: StateSnapshot,
+        frame: Optional[np.ndarray] = None,
+    ) -> BotState:
+        """Resolução estrita de estado de alto nível (Section 20).
+        1. Se BATTLE UI / Batalha confirmada -> BATTLE (Prioridade Absoluta)
+        2. Se LOW_HP fora de batalha -> HEALING
+        3. Caso contrário -> WORLD (EXPLORING / READY)
+        """
+        battle_ui_res = self.battle_ui_detector.analyze_battle_ui(frame) if frame is not None else None
+        bt = snapshot.battle_telemetry
+        is_battle = bool(
+            (battle_ui_res and battle_ui_res.battle_ui_confirmed) or
+            (bt and bt.in_battle) or
+            (snapshot.screen_state in (AgentState.BATTLE, AgentState.BATTLE_DETECTED))
+        )
+        if is_battle:
+            return BotState.BATTLE
+
+        player_hp_pct = bt.player_hp_pct if (bt and bt.player_hp_pct is not None) else 1.0
+        team_needs_heal = (
+            self.memory_manager.team_status.requires_immediate_heal
+            if hasattr(self.memory_manager, "team_status") and self.memory_manager.team_status
+            else False
+        )
+        if player_hp_pct <= self.healing_hp_ratio or team_needs_heal:
+            return BotState.HEALING
+
+        return BotState.EXPLORING
+
     def _handle_battle_cycle(
         self,
         snapshot: StateSnapshot,
@@ -444,7 +505,90 @@ class LumenaBotEngine:
             return
 
         t0 = time.time()
-        # Analisa visão dinâmica de combate (N slots de skill, posicionamento, alvos)
+        # 1. Analisa Battle UI dedicada (Template-First)
+        battle_ui_res = self.battle_ui_detector.analyze_battle_ui(frame_before)
+        self.health_monitor["battle_ui"] = "CONFIRMED" if battle_ui_res.battle_ui_confirmed else "INACTIVE"
+        self.health_monitor["fight"] = "FOUND" if (battle_ui_res.fight_button and battle_ui_res.fight_button.is_present) else "NOT_FOUND"
+
+        # Se estiver em Turn Lock (aguardando resolução da animação de turno)
+        if self.battle_ui_controller.is_waiting_turn_resolution:
+            res_done = self.battle_ui_controller.process_turn_resolution_check(frame_before)
+            if not res_done:
+                self.logger.debug("⏳ [COMBAT] Aguardando resolução da animação de turno...")
+                self.battle_ui_controller.handle_battle_watchdog()
+                return
+
+        # Checa se a batalha terminou (apenas se vitória/derrota detectada ou se nem telemetria nem snapshot indicam batalha)
+        bt = snapshot.battle_telemetry
+        if (bt and (bt.victory_detected or bt.defeat_detected)) or (snapshot.screen_state not in (AgentState.BATTLE, AgentState.BATTLE_DETECTED) and not (combat_snapshot and combat_snapshot.in_battle)):
+            if self.battle_ui_controller.is_battle_finished(frame_before, in_battle_hint=False):
+                self.logger.info("⚔️ [BATTLE UI] Batalha finalizada. Avaliando HP pós-combate...")
+                player_hp = snapshot.player_info.hp_ratio if snapshot.player_info else 1.0
+                if player_hp <= self.healing_hp_ratio:
+                    self.logger.warning(f"🩹 [POST_BATTLE] HP Crítico pós-batalha ({player_hp*100:.1f}% <= {self.healing_hp_ratio*100:.1f}%). Transicionando para exploração e rota de cura.")
+                    self.fsm.transition_to(BotState.EXPLORING, reason="Batalha Concluída")
+                    self.fsm.transition_to(BotState.HEALING, reason="HP Crítico pós-batalha")
+                    self._handle_healing_cycle(snapshot, frame_before)
+                else:
+                    self.logger.info("🌲 [POST_BATTLE] HP Saudável. Retornando à exploração.")
+                    self.fsm.transition_to(BotState.EXPLORING, reason="Batalha Concluída (HP Saudável)")
+                    self._handle_overworld_cycle(snapshot, frame_before)
+                return
+
+        # Se um modal pós-batalha for detectado (VICTORY, LEVEL UP, LOOT, REWARD)
+        if battle_ui_res.modal_detected:
+            self.logger.info(f"🏆 [BATTLE UI] Modal pós-combate detectado ({battle_ui_res.modal_type}). Dispensando modal...")
+            self.battle_ui_controller.dismiss_post_battle_modal(frame_before, screen_capture_func=self.screen_capture.capture_frame)
+            return
+
+        # Se o botão FIGHT estiver disponível e o menu de skills não estiver aberto: CLIQUE DETERMINÍSTICO IMEDIATO
+        if battle_ui_res.fight_button and battle_ui_res.fight_button.is_present and not battle_ui_res.skill_menu_open:
+            self.logger.info("⚔️ [BATTLE UI] Botão FIGHT detectado. Executando clique determinístico imediato.")
+            dispatched, latency, verified = self.battle_ui_controller.click_fight(
+                frame_before=frame_before,
+                screen_capture_func=self.screen_capture.capture_frame,
+            )
+            if dispatched:
+                self._last_physical_action_time = time.time()
+                self._last_combat_action_time = time.time()
+                self._stalled_warning_emitted = False
+                self._combat_stalled_emitted = False
+                self.health_monitor["input_dispatched"] = True
+                self.health_monitor["input_requested"] = True
+                self.health_monitor["action"] = True
+                self.health_monitor["verification"] = verified
+                self.health_monitor["last_action"] = "CLICK_FIGHT"
+                self.health_monitor["decision"] = "CLICK_FIGHT"
+                self.telemetry.record_action(True, latency=latency, action_type="CLICK_FIGHT")
+                return
+
+        # Se o menu de habilidades estiver aberto: Seleciona e despacha habilidade primária
+        if battle_ui_res.skill_menu_open:
+            skills = self.battle_ui_controller.find_available_skills(frame_before)
+            if skills:
+                primary = self.battle_ui_controller.select_primary_skill(skills)
+                if primary:
+                    self.logger.info(f"⚔️ [BATTLE UI] Executando habilidade primária: {primary.skill_name} (#{primary.slot_index})")
+                    dispatched, latency, verified = self.battle_ui_controller.execute_skill(
+                        skill=primary,
+                        frame_before=frame_before,
+                        screen_capture_func=self.screen_capture.capture_frame,
+                    )
+                    if dispatched:
+                        self._last_physical_action_time = time.time()
+                        self._last_combat_action_time = time.time()
+                        self._stalled_warning_emitted = False
+                        self._combat_stalled_emitted = False
+                        self.health_monitor["input_dispatched"] = True
+                        self.health_monitor["input_requested"] = True
+                        self.health_monitor["action"] = True
+                        self.health_monitor["verification"] = verified
+                        self.health_monitor["last_action"] = f"SKILL_{primary.slot_index}"
+                        self.health_monitor["decision"] = f"SKILL_{primary.slot_index}"
+                        self.telemetry.record_action(True, latency=latency, action_type="USE_SKILL")
+                        return
+
+        # 2. Analisa visão dinâmica de combate (N slots de skill, posicionamento, alvos)
         csnap = combat_snapshot if combat_snapshot is not None else self.combat_vision.analyze_frame(frame_before, timestamp=snapshot.timestamp)
 
         # Atualiza métricas de combate para a GUI e HealthMonitor
@@ -564,14 +708,13 @@ class LumenaBotEngine:
             )
             return
 
-        self.health_monitor["current_goal"] = "EXPLORE"
-        self.health_monitor["current_target"] = "NONE"
-        self.telemetry.update_agent_status(
-            state="EXPLORING",
-            objective="Patrulhando Área de Farm",
-            decision="Navegação WASD",
-            reason="Buscando Encontros de Lumens",
-        )
+        # Se HP estiver baixo (<= 40%), transiciona para rotina de cura no Cristal
+        player_hp = snapshot.player_info.hp_ratio if snapshot.player_info else 1.0
+        if player_hp <= self.healing_hp_ratio:
+            self.logger.warning(f"🩹 [EXPLORING] HP Baixo ({player_hp*100:.1f}% <= {self.healing_hp_ratio*100:.1f}%). Transicionando para rota de cura no Cristal.")
+            self.fsm.transition_to(BotState.HEALING, reason="HP Baixo em Exploração")
+            self._handle_healing_cycle(snapshot, frame_before)
+            return
 
         dir_key = "w"
         t0 = time.time()
@@ -766,7 +909,7 @@ class LumenaBotEngine:
         # 2. Inimigos do CombatSnapshot
         if combat_snapshot and getattr(combat_snapshot, "target_enemy", None):
             e = combat_snapshot.target_enemy
-            if hasattr(e, "bbox") and e.bbox:
+            if hasattr(e, "bbox") and e.bbox and len(e.bbox) == 4:
                 ex, ey, ew, eh = e.bbox
                 cv2.rectangle(annotated, (ex, ey), (ex + ew, ey + eh), (0, 0, 255), 2)
                 cv2.putText(annotated, f"[ENEMY] {getattr(e, 'name', '')}", (ex, max(15, ey - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)

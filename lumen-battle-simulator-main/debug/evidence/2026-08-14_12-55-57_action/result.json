@@ -1,0 +1,16 @@
+{
+  "action_requested": true,
+  "input_dispatched": true,
+  "action_verified": true,
+  "physically_validated": true,
+  "target_window_verified": true,
+  "foreground_verified": true,
+  "visual_change_detected": true,
+  "visual_delta": 0.05,
+  "physical_execution_verified": true,
+  "target_type": "HEALING_CRYSTAL",
+  "target_confidence": 0.99,
+  "action": "TEST_MOVE",
+  "failure_reason": "",
+  "timestamp": "2026-08-14_12-55-57"
+}

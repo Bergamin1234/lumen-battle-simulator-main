@@ -1,0 +1,15 @@
+{
+  "hwnd": 132226,
+  "pid": 15024,
+  "process_name": "chrome.exe",
+  "title": "Lumena | Jogo de navegador para colecionar criaturas em 3D - Google Chrome",
+  "bounds": [
+    1912,
+    -8,
+    1936,
+    1048
+  ],
+  "is_active": false,
+  "foreground_verified": true,
+  "canvas_detected": true
+}

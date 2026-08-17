@@ -209,6 +209,9 @@ class PlayerInfo:
     confidence: float = 1.0
     detected: bool = False
     detection_method: str = "HEURISTIC"
+    hp_ratio: float = 1.0
+    current_hp: int = 100
+    max_hp: int = 100
 
     @property
     def bbox(self) -> tuple[int, int, int, int]:

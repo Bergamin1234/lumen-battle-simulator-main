@@ -1,0 +1,13 @@
+{
+  "physically_validated": false,
+  "status": "NO_TARGET_WINDOW",
+  "battle_detected": false,
+  "fight_clicked": false,
+  "skill_executed": false,
+  "turn_resolved": false,
+  "modal_dismissed": false,
+  "world_restored": false,
+  "healing_evaluated": false,
+  "visual_delta_fight": 0.0,
+  "visual_delta_skill": 0.0
+}

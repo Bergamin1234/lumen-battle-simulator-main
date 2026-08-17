@@ -18,15 +18,22 @@ class BotState(enum.Enum):
     OBSERVING = "OBSERVING"
     EXPLORING = "EXPLORING"
     BATTLE_DETECTED = "BATTLE_DETECTED"
+    ENGAGING_BATTLE = "BATTLE"
     BATTLE = "BATTLE"
+    BATTLE_ACTION_REQUIRED = "BATTLE"
+    BATTLE_WAITING_TURN_RESOLUTION = "BATTLE_WAITING_TURN_RESOLUTION"
+    BATTLE_MODAL_DISMISSAL = "BATTLE_MODAL_DISMISSAL"
+    POST_BATTLE_EVALUATION = "POST_BATTLE_EVALUATION"
     DIALOG = "DIALOG"
     HEALING = "HEALING"
+    HEALING_ROUTINE = "HEALING"
     VICTORY = "VICTORY"
     DEFEAT = "DEFEAT"
     RECOVERING = "RECOVERING"
     ERROR = "ERROR"
     STOPPING = "STOPPING"
     EMERGENCY_STOP = "EMERGENCY_STOP"
+    SAFE_STOP = "SAFE_STOP"
     MANUAL = "MANUAL"
 
 
@@ -41,23 +48,27 @@ class BotStateMachine:
 
         # Tabela de transições permitidas
         self._allowed_transitions: Dict[BotState, Set[BotState]] = {
-            BotState.IDLE: {BotState.STARTING, BotState.INITIALIZING, BotState.MANUAL, BotState.EMERGENCY_STOP, BotState.OBSERVING, BotState.EXPLORING, BotState.BATTLE, BotState.HEALING, BotState.DIALOG},
-            BotState.STARTING: {BotState.INITIALIZING, BotState.FOCUSING, BotState.OBSERVING, BotState.ERROR, BotState.STOPPING, BotState.EMERGENCY_STOP},
-            BotState.INITIALIZING: {BotState.FOCUSING, BotState.OBSERVING, BotState.RECOVERING, BotState.ERROR, BotState.STOPPING, BotState.EMERGENCY_STOP},
-            BotState.FOCUSING: {BotState.OBSERVING, BotState.EXPLORING, BotState.RECOVERING, BotState.ERROR, BotState.STOPPING, BotState.EMERGENCY_STOP},
-            BotState.OBSERVING: {BotState.EXPLORING, BotState.BATTLE_DETECTED, BotState.BATTLE, BotState.DIALOG, BotState.HEALING, BotState.STOPPING, BotState.EMERGENCY_STOP, BotState.MANUAL},
-            BotState.EXPLORING: {BotState.OBSERVING, BotState.BATTLE_DETECTED, BotState.BATTLE, BotState.DIALOG, BotState.HEALING, BotState.RECOVERING, BotState.STOPPING, BotState.EMERGENCY_STOP},
-            BotState.BATTLE_DETECTED: {BotState.BATTLE, BotState.OBSERVING, BotState.RECOVERING, BotState.STOPPING, BotState.EMERGENCY_STOP},
-            BotState.BATTLE: {BotState.VICTORY, BotState.DEFEAT, BotState.OBSERVING, BotState.RECOVERING, BotState.ERROR, BotState.STOPPING, BotState.EMERGENCY_STOP},
-            BotState.DIALOG: {BotState.OBSERVING, BotState.EXPLORING, BotState.RECOVERING, BotState.STOPPING, BotState.EMERGENCY_STOP},
-            BotState.HEALING: {BotState.OBSERVING, BotState.EXPLORING, BotState.RECOVERING, BotState.STOPPING, BotState.EMERGENCY_STOP},
-            BotState.VICTORY: {BotState.OBSERVING, BotState.EXPLORING, BotState.STOPPING, BotState.EMERGENCY_STOP},
-            BotState.DEFEAT: {BotState.OBSERVING, BotState.RECOVERING, BotState.STOPPING, BotState.EMERGENCY_STOP},
-            BotState.RECOVERING: {BotState.OBSERVING, BotState.FOCUSING, BotState.EXPLORING, BotState.ERROR, BotState.STOPPING, BotState.EMERGENCY_STOP},
-            BotState.ERROR: {BotState.RECOVERING, BotState.IDLE, BotState.STOPPING, BotState.EMERGENCY_STOP},
-            BotState.STOPPING: {BotState.IDLE, BotState.EMERGENCY_STOP},
+            BotState.IDLE: {BotState.STARTING, BotState.INITIALIZING, BotState.MANUAL, BotState.EMERGENCY_STOP, BotState.SAFE_STOP, BotState.OBSERVING, BotState.EXPLORING, BotState.BATTLE, BotState.HEALING, BotState.DIALOG},
+            BotState.STARTING: {BotState.INITIALIZING, BotState.FOCUSING, BotState.OBSERVING, BotState.ERROR, BotState.STOPPING, BotState.EMERGENCY_STOP, BotState.SAFE_STOP},
+            BotState.INITIALIZING: {BotState.FOCUSING, BotState.OBSERVING, BotState.RECOVERING, BotState.ERROR, BotState.STOPPING, BotState.EMERGENCY_STOP, BotState.SAFE_STOP},
+            BotState.FOCUSING: {BotState.OBSERVING, BotState.EXPLORING, BotState.RECOVERING, BotState.ERROR, BotState.STOPPING, BotState.EMERGENCY_STOP, BotState.SAFE_STOP},
+            BotState.OBSERVING: {BotState.EXPLORING, BotState.BATTLE_DETECTED, BotState.BATTLE, BotState.DIALOG, BotState.HEALING, BotState.STOPPING, BotState.EMERGENCY_STOP, BotState.SAFE_STOP, BotState.MANUAL},
+            BotState.EXPLORING: {BotState.OBSERVING, BotState.BATTLE_DETECTED, BotState.BATTLE, BotState.DIALOG, BotState.HEALING, BotState.RECOVERING, BotState.STOPPING, BotState.EMERGENCY_STOP, BotState.SAFE_STOP},
+            BotState.BATTLE_DETECTED: {BotState.BATTLE, BotState.OBSERVING, BotState.RECOVERING, BotState.STOPPING, BotState.EMERGENCY_STOP, BotState.SAFE_STOP},
+            BotState.BATTLE: {BotState.BATTLE_WAITING_TURN_RESOLUTION, BotState.BATTLE_MODAL_DISMISSAL, BotState.POST_BATTLE_EVALUATION, BotState.VICTORY, BotState.DEFEAT, BotState.EXPLORING, BotState.OBSERVING, BotState.RECOVERING, BotState.ERROR, BotState.STOPPING, BotState.EMERGENCY_STOP, BotState.SAFE_STOP},
+            BotState.BATTLE_WAITING_TURN_RESOLUTION: {BotState.BATTLE, BotState.BATTLE_MODAL_DISMISSAL, BotState.POST_BATTLE_EVALUATION, BotState.VICTORY, BotState.DEFEAT, BotState.EXPLORING, BotState.OBSERVING, BotState.RECOVERING, BotState.ERROR, BotState.STOPPING, BotState.EMERGENCY_STOP, BotState.SAFE_STOP},
+            BotState.BATTLE_MODAL_DISMISSAL: {BotState.POST_BATTLE_EVALUATION, BotState.EXPLORING, BotState.HEALING, BotState.BATTLE, BotState.OBSERVING, BotState.STOPPING, BotState.EMERGENCY_STOP, BotState.SAFE_STOP},
+            BotState.POST_BATTLE_EVALUATION: {BotState.EXPLORING, BotState.HEALING, BotState.OBSERVING, BotState.STOPPING, BotState.EMERGENCY_STOP, BotState.SAFE_STOP},
+            BotState.DIALOG: {BotState.OBSERVING, BotState.EXPLORING, BotState.RECOVERING, BotState.STOPPING, BotState.EMERGENCY_STOP, BotState.SAFE_STOP},
+            BotState.HEALING: {BotState.OBSERVING, BotState.EXPLORING, BotState.RECOVERING, BotState.STOPPING, BotState.EMERGENCY_STOP, BotState.SAFE_STOP},
+            BotState.VICTORY: {BotState.OBSERVING, BotState.EXPLORING, BotState.HEALING, BotState.STOPPING, BotState.EMERGENCY_STOP, BotState.SAFE_STOP},
+            BotState.DEFEAT: {BotState.OBSERVING, BotState.EXPLORING, BotState.HEALING, BotState.RECOVERING, BotState.STOPPING, BotState.EMERGENCY_STOP, BotState.SAFE_STOP},
+            BotState.RECOVERING: {BotState.OBSERVING, BotState.FOCUSING, BotState.EXPLORING, BotState.ERROR, BotState.STOPPING, BotState.EMERGENCY_STOP, BotState.SAFE_STOP},
+            BotState.ERROR: {BotState.RECOVERING, BotState.IDLE, BotState.STOPPING, BotState.EMERGENCY_STOP, BotState.SAFE_STOP},
+            BotState.STOPPING: {BotState.IDLE, BotState.EMERGENCY_STOP, BotState.SAFE_STOP},
             BotState.EMERGENCY_STOP: {BotState.IDLE, BotState.OBSERVING, BotState.RECOVERING},
-            BotState.MANUAL: {BotState.OBSERVING, BotState.IDLE, BotState.EMERGENCY_STOP},
+            BotState.SAFE_STOP: {BotState.IDLE, BotState.OBSERVING, BotState.RECOVERING},
+            BotState.MANUAL: {BotState.OBSERVING, BotState.IDLE, BotState.EMERGENCY_STOP, BotState.SAFE_STOP},
         }
 
     @property

@@ -469,18 +469,18 @@ class ModernLumenaGUI:
 
         self.battle_grid_vars = {}
         fields = [
-            ("BATTLE", "battle_val", "ACTIVE"),
-            ("HP", "hp_val", "91/113"),
+            ("STATE", "state_val", "BATTLE"),
+            ("BATTLE UI", "battle_ui_val", "CONFIRMED"),
+            ("FIGHT", "fight_val", "FOUND"),
             ("ENEMY", "enemy_val", "DETECTED"),
             ("PLAYER", "player_val", "DETECTED"),
             ("CRYSTAL", "crystal_val", "BLOCKED"),
-            ("SKILLS", "skills_val", "10"),
-            ("AVAILABLE", "avail_val", "6"),
-            ("SELECTED", "selected_val", "SKILL_01"),
-            ("DECISION", "decision_val", "ATTACK"),
-            ("INPUT REQUEST", "in_req_val", "YES"),
-            ("INPUT DISPATCH", "in_disp_val", "YES"),
-            ("ACTION", "action_val", "USE_SKILL"),
+            ("CRYSTAL SEARCH", "crystal_search_val", "BLOCKED"),
+            ("SKILLS", "skills_val", "6"),
+            ("AVAILABLE SKILLS", "avail_val", "4"),
+            ("SELECTED SKILL", "selected_val", "SKILL_01"),
+            ("ACTION", "action_val", "DISPATCHED"),
+            ("INPUT", "input_val", "DISPATCHED"),
             ("VERIFICATION", "verif_val", "VERIFIED"),
             ("VISUAL DELTA", "delta_val", "0.0185"),
             ("WATCHDOG", "watchdog_val", "OK"),
@@ -1298,19 +1298,19 @@ class ModernLumenaGUI:
                 self.battle_reason_lbl.configure(text=f"Slots Detectados: {sk_det} | Slots Disponíveis: {sk_av} | Modo: {self.bot_controller.engine.mode}")
 
                 if hasattr(self, "battle_grid_vars"):
-                    self.battle_grid_vars["battle_val"].configure(text=str(b_stat))
-                    self.battle_grid_vars["hp_val"].configure(text=f"{p_hp} ({hp_r})")
+                    self.battle_grid_vars["state_val"].configure(text=str(hm.get("state", "BATTLE")))
+                    self.battle_grid_vars["battle_ui_val"].configure(text=str(hm.get("battle_ui", "CONFIRMED")))
+                    self.battle_grid_vars["fight_val"].configure(text=str(hm.get("fight", "FOUND")))
                     self.battle_grid_vars["enemy_val"].configure(text="DETECTED" if e_det == "YES" else "NONE")
                     self.battle_grid_vars["player_val"].configure(text=str(hm.get("player_detected", "DETECTED")))
-                    self.battle_grid_vars["crystal_val"].configure(text=str(c_src))
+                    self.battle_grid_vars["crystal_val"].configure(text=str(hm.get("crystal", "BLOCKED")))
+                    self.battle_grid_vars["crystal_search_val"].configure(text=str(c_src))
                     self.battle_grid_vars["skills_val"].configure(text=str(sk_det))
                     self.battle_grid_vars["avail_val"].configure(text=str(sk_av))
-                    self.battle_grid_vars["selected_val"].configure(text=str(sel_sk)[:12])
-                    self.battle_grid_vars["decision_val"].configure(text=str(hm.get("decision", "ATTACK"))[:12])
-                    self.battle_grid_vars["in_req_val"].configure(text="YES" if hm.get("input_requested") else "NO")
-                    self.battle_grid_vars["in_disp_val"].configure(text="YES" if hm.get("input_dispatched") else "NO")
-                    self.battle_grid_vars["action_val"].configure(text=str(last_act)[:12])
-                    self.battle_grid_vars["verif_val"].configure(text="VERIFIED" if hm.get("verification") else "UNCONFIRMED")
+                    self.battle_grid_vars["selected_val"].configure(text=str(sel_sk)[:14])
+                    self.battle_grid_vars["action_val"].configure(text=str(last_act)[:14])
+                    self.battle_grid_vars["input_val"].configure(text="DISPATCHED" if hm.get("input_dispatched") else "PENDING")
+                    self.battle_grid_vars["verif_val"].configure(text="VERIFIED" if hm.get("verification") else "PENDING")
                     self.battle_grid_vars["delta_val"].configure(text=f"{hm.get('visual_delta', 0.0):.4f}")
                     self.battle_grid_vars["watchdog_val"].configure(text=str(hm.get("watchdog", "OK")))
 

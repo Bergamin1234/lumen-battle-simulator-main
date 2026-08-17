@@ -1,0 +1,15 @@
+{
+  "battle_detected": false,
+  "battle_ui_confirmed": false,
+  "fight_detected": false,
+  "fight_clicked": false,
+  "fight_verified": false,
+  "skills_detected": 0,
+  "skill_action_dispatched": false,
+  "skill_action_verified": false,
+  "crystal_search_blocked": false,
+  "visual_delta_fight": 0.0,
+  "visual_delta_skill": 0.0,
+  "physically_validated": false,
+  "status": "NO_TARGET_WINDOW"
+}

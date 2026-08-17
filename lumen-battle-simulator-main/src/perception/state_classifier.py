@@ -58,8 +58,12 @@ class StateClassifier:
             # 1. Executa detecção de UI
             ui_elements = self.ui_detector.detect_all(frame)
 
-            # 2. Executa detecção do Jogador (Player)
-            p_found, p_bbox, p_center, p_conf = self.landmark_detector.detect_player(frame)
+            # 2. Executa detecção de Batalha primeiro (Context-First)
+            battle_telemetry = self.battle_detector.detect_battle_state(frame)
+            in_battle = bool(battle_telemetry.in_battle)
+
+            # 3. Executa detecção do Jogador (Player) com contexto de mundo vs batalha
+            p_found, p_bbox, p_center, p_conf = self.landmark_detector.detect_player(frame, in_battle=in_battle)
             player_info = PlayerInfo(
                 x=p_bbox[0],
                 y=p_bbox[1],
@@ -74,18 +78,19 @@ class StateClassifier:
                     bounding_box=p_bbox,
                     confidence=p_conf,
                     center=p_center,
-                    semantic_type="PLAYER",
+                    semantic_type="BATTLE_PLAYER" if in_battle else "WORLD_PLAYER",
                 )
-
-            # 3. Executa detecção de Batalha
-            battle_telemetry = self.battle_detector.detect_battle_state(frame)
 
             # 4. Executa detecção do Mundo e Vegetação
             world_features = self.world_detector.detect_world_features(frame)
             grass_density = world_features["grass_density"]
 
-            # 5. Executa detecção de Marcos (Cristal Azul de Cura relativo ao Jogador)
-            crystal_found, crystal_pos, crystal_elem = self.landmark_detector.detect_crystal(frame, player_pos=p_center)
+            # 5. Executa detecção de Marcos (Cristal de Cura DESABILITADO em batalha)
+            if in_battle:
+                crystal_found, crystal_pos, crystal_elem = False, None, None
+            else:
+                crystal_found, crystal_pos, crystal_elem = self.landmark_detector.detect_crystal(frame, player_pos=p_center, in_battle=False)
+
             if crystal_found and crystal_elem is not None:
                 ui_elements["blue_crystal"] = crystal_elem
 

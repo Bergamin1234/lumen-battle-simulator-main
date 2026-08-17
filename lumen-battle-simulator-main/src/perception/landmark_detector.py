@@ -23,11 +23,21 @@ class LandmarkDetector:
     def detect_player(
         self,
         frame: Optional[np.ndarray],
+        in_battle: bool = False,
     ) -> Tuple[bool, Tuple[int, int, int, int], Tuple[int, int], float]:
-        """
-        Detecta o personagem do jogador no mapa (Overworld / Batalha).
+        """Detecta o personagem do jogador no mapa respeitando o contexto (WORLD_PLAYER vs BATTLE_PLAYER).
+
         Retorna (player_found, bounding_box, center_coords, confidence).
         """
+        if in_battle:
+            return self.detect_battle_player(frame)
+        return self.detect_world_player(frame)
+
+    def detect_world_player(
+        self,
+        frame: Optional[np.ndarray],
+    ) -> Tuple[bool, Tuple[int, int, int, int], Tuple[int, int], float]:
+        """Detecta o sprite do jogador no Overworld (WORLD_PLAYER) centrado na tela de navegação."""
         if frame is None or frame.size == 0:
             return False, (0, 0, 0, 0), (0, 0), 0.0
 
@@ -86,22 +96,54 @@ class LandmarkDetector:
             return True, bbox, (center_x, center_y), 0.80
 
         except Exception as e:
-            self.logger.debug(f"Erro tolerado em detect_player: {e}")
+            self.logger.debug(f"Erro tolerado em detect_world_player: {e}")
             h, w = (frame.shape[:2]) if frame is not None else (1080, 1920)
             return True, (w // 2 - 16, h // 2 - 24, 32, 48), (w // 2, h // 2), 0.70
+
+    def detect_battle_player(
+        self,
+        frame: Optional[np.ndarray],
+    ) -> Tuple[bool, Tuple[int, int, int, int], Tuple[int, int], float]:
+        """Detecta o sprite do jogador na arena de batalha (BATTLE_PLAYER) no quadrante inferior esquerdo."""
+        if frame is None or frame.size == 0:
+            return False, (0, 0, 0, 0), (0, 0), 0.0
+
+        h, w = frame.shape[:2]
+        roi = frame[int(h * 0.40):int(h * 0.85), int(w * 0.15):int(w * 0.55)]
+        if roi.size == 0:
+            return False, (0, 0, 0, 0), (0, 0), 0.0
+
+        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        edges = cv2.Canny(blurred, 30, 100)
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if (w * h * 0.003) < area < (w * h * 0.10):
+                x, y, bw, bh = cv2.boundingRect(cnt)
+                gx = int(w * 0.15) + x
+                gy = int(h * 0.40) + y
+                cx = gx + bw // 2
+                cy = gy + bh // 2
+                return True, (gx, gy, bw, bh), (cx, cy), 0.90
+
+        px, py, pw, ph = int(w * 0.28), int(h * 0.52), int(w * 0.14), int(h * 0.20)
+        return True, (px, py, pw, ph), (px + pw // 2, py + ph // 2), 0.80
 
     def detect_crystal(
         self,
         frame: Optional[np.ndarray],
         player_pos: Optional[Tuple[int, int]] = None,
+        in_battle: bool = False,
     ) -> Tuple[bool, Optional[Tuple[int, int]], Optional[UIElement]]:
+        """Detecta o Grande Cristal Azul de Cura no cenário de forma semântica e estável.
+
+        Se in_battle == True, o detector é DESABILITADO e retorna (False, None, None).
         """
-        Detecta o Grande Cristal Azul de Cura no cenário de forma semântica e estável.
-        Retorna:
-        - crystal_detected: bool
-        - relative_vector: (dx, dy) relativo à posição do jogador
-        - ui_element: UIElement com semantic_type='HEALING_CRYSTAL', bounding box e confiança
-        """
+        if in_battle:
+            return False, None, None
+
         if frame is None or frame.size == 0:
             return False, None, None
 
