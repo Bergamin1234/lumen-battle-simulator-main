@@ -35,7 +35,7 @@ class BattleUIController:
         input_controller: Optional[InputController] = None,
         ui_detector: Optional[BattleUIDetector] = None,
         event_bus: Optional[EventBus] = None,
-        turn_timeout: float = 6.0,
+        turn_timeout: float = 8.0,
     ) -> None:
         self.logger = logging.getLogger("LumenaBattleUIController")
         self.input_ctrl = input_controller or InputController()
@@ -649,7 +649,7 @@ class BattleUIController:
         return False
 
     def handle_battle_watchdog(self) -> bool:
-        """Battle Turn Watchdog: Acionado quando a batalha fica estagnada sem ação/transição por > 6s."""
+        """Battle Turn Watchdog em Camadas: Recuperação progressiva após 6s..8s de inatividade."""
         now = time.time()
         elapsed = now - self._last_action_timestamp
 
@@ -663,17 +663,36 @@ class BattleUIController:
                 data={"elapsed": elapsed, "attempt": self._consecutive_watchdog_triggers},
                 category="COMBAT",
                 level="WARNING",
-                message=f"BATTLE_WATCHDOG_TRIGGERED: Recuperando foco e canvas (Tentativa {self._consecutive_watchdog_triggers}).",
+                message=f"BATTLE_WATCHDOG_TRIGGERED: Camada {self._consecutive_watchdog_triggers}/3 acionada.",
             )
 
-            # Destrava Turn Lock e refocaliza
             self._is_waiting_turn_resolution = False
-            self.input_ctrl.focus_game_window()
-            self.input_ctrl.window_manager.ensure_canvas_focus(0.5, 0.5)
             self._last_action_timestamp = time.time()
 
-            if self._consecutive_watchdog_triggers >= 3:
+            if self._consecutive_watchdog_triggers == 1:
+                # Camada 1: Re-focaliza janela e clica no centro do Canvas WebGL
+                self.input_ctrl.focus_game_window()
+                self.input_ctrl.window_manager.ensure_canvas_focus(0.5, 0.5)
+                return True
+            elif self._consecutive_watchdog_triggers == 2:
+                # Camada 2: Reenvia clique em FIGHT ou tecla SPACE
+                self.input_ctrl.focus_game_window()
+                self.input_ctrl.press_key("space", duration=0.10)
+                bounds = self.input_ctrl.window_manager.get_window_bounds()
+                cx = int(bounds[0] + bounds[2] * 0.78)
+                cy = int(bounds[1] + bounds[3] * 0.80)
+                self.input_ctrl.click(cx, cy)
+                return True
+            else:
+                # Camada 3: SAFE_STOP seguro com dump de telemetria
                 self.logger.critical("🛑 [SAFE_STOP] Parada segura acionada por 3 timeouts consecutivos de combate.")
+                self.event_bus.publish(
+                    EventType.SAFE_STOP_TRIGGERED,
+                    data={"reason": "BATTLE_WATCHDOG_MAX_RETRIES_EXCEEDED", "triggers": self._consecutive_watchdog_triggers},
+                    category="SAFETY",
+                    level="CRITICAL",
+                    message="SAFE_STOP_TRIGGERED: Combate travado sem resposta após 3 tentativas.",
+                )
                 self.event_bus.publish(
                     EventType.EXECUTION_FAILURE,
                     data={"reason": "BATTLE_WATCHDOG_MAX_RETRIES_EXCEEDED", "triggers": self._consecutive_watchdog_triggers},
@@ -682,8 +701,6 @@ class BattleUIController:
                     message="EXECUTION_FAILURE: Combate travado sem resposta após 3 tentativas de recuperação.",
                 )
                 return False
-
-            return True
 
         return False
 

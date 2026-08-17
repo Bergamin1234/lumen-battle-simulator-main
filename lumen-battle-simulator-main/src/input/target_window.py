@@ -716,3 +716,7 @@ class TargetWindowManager:
             return (point.x, point.y, rect.right - rect.left, rect.bottom - rect.top)
         except Exception:
             return (0, 0, 1920, 1080)
+
+
+# Alias oficial de compatibilidade
+WindowManager = TargetWindowManager

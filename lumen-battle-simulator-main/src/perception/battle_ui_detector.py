@@ -78,13 +78,47 @@ class BattleUIDetectionResult:
 
 
 class BattleUIDetector:
-    """Detector especializado em interface de combate via Template Matching e Análise de ROI."""
+    """Detector especializado em interface de combate via Template Matching e Análise de Sub-ROIs (< 10ms)."""
 
     ROI_BATTLE_ACTIONS: Tuple[float, float, float, float] = (0.50, 0.55, 0.48, 0.42)
+    ROI_BATTLE_FIGHT: Tuple[float, float, float, float] = (0.70, 0.70, 0.28, 0.28)
+    ROI_BATTLE_ARENA_ENEMY: Tuple[float, float, float, float] = (0.35, 0.15, 0.45, 0.40)
+    ROI_BATTLE_PLAYER_HP: Tuple[float, float, float, float] = (0.05, 0.65, 0.30, 0.25)
     ROI_ENEMY_STATUS: Tuple[float, float, float, float] = (0.35, 0.05, 0.60, 0.30)
-    ROI_PLAYER_STATUS: Tuple[float, float, float, float] = (0.02, 0.65, 0.35, 0.32)
+    ROI_PLAYER_STATUS: Tuple[float, float, float, float] = (0.05, 0.65, 0.30, 0.25)
+    ROI_POST_BATTLE_MODALS: Tuple[float, float, float, float] = (0.20, 0.20, 0.60, 0.60)
     ROI_MODALS: Tuple[float, float, float, float] = (0.20, 0.20, 0.60, 0.60)
-    ROI_ARENA_TARGETS: Tuple[float, float, float, float] = (0.30, 0.15, 0.65, 0.50)
+    ROI_ARENA_TARGETS: Tuple[float, float, float, float] = (0.35, 0.15, 0.45, 0.40)
+
+    @staticmethod
+    def detect_webgl_canvas_bounds(raw_window_frame: Optional[np.ndarray]) -> Tuple[int, int, int, int]:
+        """
+        Escaneia a imagem de fora para dentro descartando barras pretas (letterboxing),
+        cinzas e cabeçalhos do navegador, isolando a área útil WebGL.
+        Retorna (canvas_x, canvas_y, canvas_w, canvas_h).
+        """
+        if raw_window_frame is None or raw_window_frame.size == 0:
+            return (0, 0, 1920, 1080)
+        h, w = raw_window_frame.shape[:2]
+        gray = cv2.cvtColor(raw_window_frame, cv2.COLOR_BGR2GRAY) if len(raw_window_frame.shape) == 3 else raw_window_frame
+
+        non_black = gray > 15
+        if not np.any(non_black):
+            return (0, 0, w, h)
+
+        row_sums = np.sum(non_black, axis=1)
+        col_sums = np.sum(non_black, axis=0)
+
+        y_indices = np.where(row_sums > int(w * 0.05))[0]
+        x_indices = np.where(col_sums > int(h * 0.05))[0]
+
+        if len(y_indices) > 0 and len(x_indices) > 0:
+            y_min, y_max = int(y_indices[0]), int(y_indices[-1])
+            x_min, x_max = int(x_indices[0]), int(x_indices[-1])
+            cw = max(100, x_max - x_min + 1)
+            ch = max(100, y_max - y_min + 1)
+            return (x_min, y_min, cw, ch)
+        return (0, 0, w, h)
 
     def __init__(
         self,
@@ -99,7 +133,7 @@ class BattleUIDetector:
         self._load_templates()
 
         # ROI Padrão para Controles de Batalha (Canto inferior direito)
-        self.hud_roi_norm = self.ROI_BATTLE_ACTIONS
+        self.hud_roi_norm = self.ROI_BATTLE_FIGHT
 
     def _load_templates(self) -> None:
         """Carrega templates PNG da pasta de templates de batalha."""

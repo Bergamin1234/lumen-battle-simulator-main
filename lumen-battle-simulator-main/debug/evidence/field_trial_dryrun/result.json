@@ -1,6 +1,6 @@
 {
   "version": "v4.4",
-  "timestamp": "2026-08-17 09:41:01",
+  "timestamp": "2026-08-17 11:31:32",
   "status": "NO_TARGET_WINDOW_DETECTED",
   "validation_category": "NOT_VALIDATED",
   "physically_validated": false,
@@ -13,15 +13,15 @@
     "canvas_detected": false
   },
   "metrics": {
-    "fps": 5901.9,
+    "fps": 0.0,
     "fps_target": 30.0,
     "fps_healthy": true,
-    "average_latency_ms": 0.36
+    "average_latency_ms": 0.78
   },
   "field_trial": {
-    "target_cycles": 3,
-    "completed_cycles": 3,
-    "total_records": 3,
+    "target_cycles": 1,
+    "completed_cycles": 1,
+    "total_records": 1,
     "cycles": [
       {
         "cycle_index": 1,
@@ -29,7 +29,7 @@
         "reason": "Ciclo concluído com sucesso",
         "steps": [
           {
-            "timestamp": 1786974061.8728552,
+            "timestamp": 1786980692.3663821,
             "cycle": 1,
             "phase": "EXPLORATION_MOVEMENT",
             "success": true,
@@ -37,7 +37,7 @@
             "details": {}
           },
           {
-            "timestamp": 1786974061.8733635,
+            "timestamp": 1786980692.3668973,
             "cycle": 1,
             "phase": "FIGHT_BUTTON_DISPATCH",
             "success": true,
@@ -45,7 +45,7 @@
             "details": {}
           },
           {
-            "timestamp": 1786974061.8733635,
+            "timestamp": 1786980692.3668973,
             "cycle": 1,
             "phase": "SKILL_SELECTION_SLOT_2",
             "success": true,
@@ -53,103 +53,23 @@
             "details": {}
           },
           {
-            "timestamp": 1786974061.8733635,
+            "timestamp": 1786980692.3668973,
             "cycle": 1,
             "phase": "POST_BATTLE_MODAL_DISMISSAL",
             "success": true,
             "visual_delta": 0.03,
             "details": {}
-          }
-        ],
-        "timestamp": 1786974061.8733635
-      },
-      {
-        "cycle_index": 2,
-        "success": true,
-        "reason": "Ciclo concluído com sucesso",
-        "steps": [
-          {
-            "timestamp": 1786974061.8733635,
-            "cycle": 2,
-            "phase": "EXPLORATION_MOVEMENT",
-            "success": true,
-            "visual_delta": 0.02,
-            "details": {}
           },
           {
-            "timestamp": 1786974061.8733635,
-            "cycle": 2,
-            "phase": "FIGHT_BUTTON_DISPATCH",
-            "success": true,
-            "visual_delta": 0.04,
-            "details": {}
-          },
-          {
-            "timestamp": 1786974061.8733635,
-            "cycle": 2,
-            "phase": "SKILL_SELECTION_SLOT_3",
-            "success": true,
-            "visual_delta": 0.035,
-            "details": {}
-          },
-          {
-            "timestamp": 1786974061.8733635,
-            "cycle": 2,
-            "phase": "POST_BATTLE_MODAL_DISMISSAL",
-            "success": true,
-            "visual_delta": 0.03,
-            "details": {}
-          }
-        ],
-        "timestamp": 1786974061.8733635
-      },
-      {
-        "cycle_index": 3,
-        "success": true,
-        "reason": "Ciclo concluído com sucesso",
-        "steps": [
-          {
-            "timestamp": 1786974061.8733635,
-            "cycle": 3,
-            "phase": "EXPLORATION_MOVEMENT",
-            "success": true,
-            "visual_delta": 0.02,
-            "details": {}
-          },
-          {
-            "timestamp": 1786974061.8733635,
-            "cycle": 3,
-            "phase": "FIGHT_BUTTON_DISPATCH",
-            "success": true,
-            "visual_delta": 0.04,
-            "details": {}
-          },
-          {
-            "timestamp": 1786974061.8733635,
-            "cycle": 3,
-            "phase": "SKILL_SELECTION_SLOT_4",
-            "success": true,
-            "visual_delta": 0.035,
-            "details": {}
-          },
-          {
-            "timestamp": 1786974061.8733635,
-            "cycle": 3,
-            "phase": "POST_BATTLE_MODAL_DISMISSAL",
-            "success": true,
-            "visual_delta": 0.03,
-            "details": {}
-          },
-          {
-            "timestamp": 1786974061.8733635,
-            "cycle": 3,
+            "timestamp": 1786980692.3668973,
+            "cycle": 1,
             "phase": "POST_BATTLE_HEALING_ROUTE",
             "success": true,
             "visual_delta": 0.05,
             "details": {}
           }
         ],
-        "timestamp": 1786974061.8733635
+        "timestamp": 1786980692.3668973
       }
     ],
     "trial_error": null

@@ -41,7 +41,12 @@ class CombatVisionAnalyzer:
         """Converte coordenadas de cliente para coordenadas globais de tela com DPI scaling."""
         return (int((point[0] + window_origin[0]) * self._dpi_scale), int((point[1] + window_origin[1]) * self._dpi_scale))
 
-    def analyze_frame(self, frame: Optional[np.ndarray], timestamp: Optional[float] = None) -> CombatSnapshot:
+    def analyze_frame(
+        self,
+        frame: Optional[np.ndarray],
+        timestamp: Optional[float] = None,
+        in_battle_hint: Optional[bool] = None,
+    ) -> CombatSnapshot:
         """Executa a análise visual completa de combate no frame recebido."""
         ts = timestamp or time.time()
         if frame is None or frame.size == 0:
@@ -51,13 +56,15 @@ class CombatVisionAnalyzer:
 
         # 1. Detecção do Botão FIGHT / HUD
         fight_pos, fight_conf = self.detect_fight_button(frame)
-        in_battle = fight_pos is not None or fight_conf >= 0.65
+        if in_battle_hint is not None:
+            in_battle = in_battle_hint
+        else:
+            in_battle = bool(fight_pos is not None or fight_conf >= 0.65)
 
         # 2. Detecção de HP do Inimigo e Jogador
         enemy_hp = self.detect_enemy_hp_percentage(frame)
         player_hp = self.detect_player_hp_percentage(frame)
-
-        if not in_battle and (enemy_hp is not None and player_hp is not None):
+        if in_battle_hint is None and enemy_hp is not None and player_hp is not None:
             in_battle = True
 
         # 3. Detecção Dinâmica de Slots de Habilidades (N slots)
@@ -208,7 +215,10 @@ class CombatVisionAnalyzer:
         in_battle: bool,
         fight_pos: Optional[Tuple[int, int]] = None,
     ) -> List[SkillSlot]:
-        """Detecta dinamicamente a barra de habilidades (SkillScanner) e analisa cada slot quanto à disponibilidade e cooldown."""
+        """Detecta dinamicamente a barra de habilidades (SkillScanner) estritamente durante combate."""
+        if not in_battle:
+            return []
+
         h, w = frame.shape[:2]
         skills: List[SkillSlot] = []
 
@@ -283,12 +293,10 @@ class CombatVisionAnalyzer:
                     )
                 )
                 slot_idx += 1
+            return skills
 
         # Se a visão não encontrou contornos nítidos, fornece grade visual estimada
-        if not skills:
-            skills = self._generate_fallback_skills(w, h)
-
-        return skills
+        return self._generate_fallback_skills(w, h)
 
     def _evaluate_cooldown_detailed(self, slot_crop: np.ndarray) -> Tuple[bool, float, float]:
         """Avalia detalhadamente se a habilidade está em cooldown com base na luminosidade média e histograma."""
@@ -364,12 +372,17 @@ class CombatVisionAnalyzer:
         return skills
 
     def detect_enemy_targets(self, frame: np.ndarray, in_battle: bool = False) -> List[EnemyTarget]:
-        """Detecta alvos inimigos presentes na tela através de contornos e posições da metade superior."""
+        """Detecta alvos inimigos confinados estritamente à elipse útil da arena de batalha."""
+        if not in_battle:
+            return []
+
         h, w = frame.shape[:2]
         enemies: List[EnemyTarget] = []
 
-        # Região superior direita/central onde os inimigos ficam posicionados no combate
-        roi = frame[int(h * 0.15):int(h * 0.60), int(w * 0.45):int(w * 0.90)]
+        # Região da arena de batalha (ROI_BATTLE_ARENA_ENEMY)
+        rx_min, rx_max = int(w * 0.35), int(w * 0.80)
+        ry_min, ry_max = int(h * 0.15), int(h * 0.55)
+        roi = frame[ry_min:ry_max, rx_min:rx_max]
         if roi.size == 0:
             return enemies
 

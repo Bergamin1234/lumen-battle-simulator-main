@@ -8,6 +8,10 @@ from src.models.lumen import UIElement
 class LandmarkDetector:
     """Detector de marcos visuais no mapa (Cristal Azul de Cura, Portais, Postes, Entradas)."""
 
+    # Máscara HSV exclusiva para o Cristal Azul Luminoso de Cura (Ciano/Azul elétrico de alta pureza)
+    CRYSTAL_HSV_LOWER = np.array([95, 160, 180], dtype=np.uint8)
+    CRYSTAL_HSV_UPPER = np.array([115, 255, 255], dtype=np.uint8)
+
     def __init__(
         self,
         crystal_hsv_lower: Optional[np.ndarray] = None,
@@ -15,9 +19,8 @@ class LandmarkDetector:
         templates: Optional[Dict[str, np.ndarray]] = None,
     ) -> None:
         self.logger = logging.getLogger("LumenaPerception")
-        # Intervalo HSV para o Cristal Azul Luminoso (Ciano/Azul elétrico)
-        self.crystal_lower = crystal_hsv_lower if crystal_hsv_lower is not None else np.array([85, 80, 120])
-        self.crystal_upper = crystal_hsv_upper if crystal_hsv_upper is not None else np.array([135, 255, 255])
+        self.crystal_lower = crystal_hsv_lower if crystal_hsv_lower is not None else self.CRYSTAL_HSV_LOWER
+        self.crystal_upper = crystal_hsv_upper if crystal_hsv_upper is not None else self.CRYSTAL_HSV_UPPER
         self.templates = templates or {}
 
     def detect_player(
@@ -25,10 +28,7 @@ class LandmarkDetector:
         frame: Optional[np.ndarray],
         in_battle: bool = False,
     ) -> Tuple[bool, Tuple[int, int, int, int], Tuple[int, int], float]:
-        """Detecta o personagem do jogador no mapa respeitando o contexto (WORLD_PLAYER vs BATTLE_PLAYER).
-
-        Retorna (player_found, bounding_box, center_coords, confidence).
-        """
+        """Detecta o personagem do jogador no mapa respeitando o contexto (WORLD_PLAYER vs BATTLE_PLAYER)."""
         if in_battle:
             return self.detect_battle_player(frame)
         return self.detect_world_player(frame)
@@ -98,36 +98,20 @@ class LandmarkDetector:
         except Exception as e:
             self.logger.debug(f"Erro tolerado em detect_world_player: {e}")
             h, w = (frame.shape[:2]) if frame is not None else (1080, 1920)
-            return True, (w // 2 - 16, h // 2 - 24, 32, 48), (w // 2, h // 2), 0.70
+            center_x, center_y = w // 2, h // 2
+            sprite_w, sprite_h = 36, 52
+            bbox = (center_x - sprite_w // 2, center_y - sprite_h // 2, sprite_w, sprite_h)
+            return True, bbox, (center_x, center_y), 0.80
 
     def detect_battle_player(
         self,
         frame: Optional[np.ndarray],
     ) -> Tuple[bool, Tuple[int, int, int, int], Tuple[int, int], float]:
-        """Detecta o sprite do jogador na arena de batalha (BATTLE_PLAYER) no quadrante inferior esquerdo."""
+        """Detecta a posição do sprite do jogador no layout de combate (canto inferior esquerdo)."""
         if frame is None or frame.size == 0:
             return False, (0, 0, 0, 0), (0, 0), 0.0
 
         h, w = frame.shape[:2]
-        roi = frame[int(h * 0.40):int(h * 0.85), int(w * 0.15):int(w * 0.55)]
-        if roi.size == 0:
-            return False, (0, 0, 0, 0), (0, 0), 0.0
-
-        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-        edges = cv2.Canny(blurred, 30, 100)
-        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        for cnt in contours:
-            area = cv2.contourArea(cnt)
-            if (w * h * 0.003) < area < (w * h * 0.10):
-                x, y, bw, bh = cv2.boundingRect(cnt)
-                gx = int(w * 0.15) + x
-                gy = int(h * 0.40) + y
-                cx = gx + bw // 2
-                cy = gy + bh // 2
-                return True, (gx, gy, bw, bh), (cx, cy), 0.90
-
         px, py, pw, ph = int(w * 0.28), int(h * 0.52), int(w * 0.14), int(h * 0.20)
         return True, (px, py, pw, ph), (px + pw // 2, py + ph // 2), 0.80
 
@@ -136,12 +120,16 @@ class LandmarkDetector:
         frame: Optional[np.ndarray],
         player_pos: Optional[Tuple[int, int]] = None,
         in_battle: bool = False,
+        player_hp_pct: Optional[float] = None,
     ) -> Tuple[bool, Optional[Tuple[int, int]], Optional[UIElement]]:
-        """Detecta o Grande Cristal Azul de Cura no cenário de forma semântica e estável.
-
-        Se in_battle == True, o detector é DESABILITADO e retorna (False, None, None).
         """
+        Detecta o Grande Cristal Azul de Cura no cenário de forma semântica e restritiva.
+        Guard Clause O(1): Se in_battle == True ou player_hp_pct > 0.40, retorna (False, None, None) imediatamente.
+        """
+        # 1. Guard Clauses em O(1)
         if in_battle:
+            return False, None, None
+        if player_hp_pct is not None and player_hp_pct > 0.40:
             return False, None, None
 
         if frame is None or frame.size == 0:
@@ -149,21 +137,20 @@ class LandmarkDetector:
 
         try:
             h, w = frame.shape[:2]
-            # Se a posição do jogador não foi passada, detecta ou usa o centro da tela
             if player_pos is None:
                 _, _, p_center, _ = self.detect_player(frame)
                 ref_x, ref_y = p_center
             else:
                 ref_x, ref_y = player_pos
 
-            # 1. Busca por template se disponível
+            # 2. Template Matching Estrito (Threshold >= 0.88)
             if "blue_crystal.png" in self.templates:
                 tmpl = self.templates["blue_crystal.png"]
                 th, tw = tmpl.shape[:2]
                 if th <= h and tw <= w:
                     res = cv2.matchTemplate(frame, tmpl, cv2.TM_CCOEFF_NORMED)
                     _, max_val, _, max_loc = cv2.minMaxLoc(res)
-                    if max_val >= 0.65:
+                    if max_val >= 0.88:
                         bx, by = max_loc
                         cx = bx + tw // 2
                         cy = by + th // 2
@@ -176,19 +163,17 @@ class LandmarkDetector:
                         )
                         return True, (cx - ref_x, cy - ref_y), elem
 
-            # 2. Segmentação HSV do Cristal Azul / Ciano Luminoso
+            # 3. Segmentação HSV Exclusiva do Cristal Azul/Ciano Brilhante
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             mask = cv2.inRange(hsv, self.crystal_lower, self.crystal_upper)
 
-            # Limpeza morfológica para conectar facetas do cristal
-            kernel_close = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
-            mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel_close)
-            kernel_open = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-            mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel_open)
+            # Limpeza morfológica
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+            mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
 
             contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            min_area = 80
-            max_area = (w * h) * 0.40  # Cristal de cura pode ser grande
+            min_area = 100
+            max_area = (w * h) * 0.35
 
             valid_crystals: List[Tuple[float, Tuple[int, int, int, int], Tuple[int, int]]] = []
             for cnt in contours:
@@ -196,20 +181,17 @@ class LandmarkDetector:
                 if min_area <= area <= max_area:
                     x, y, bw, bh = cv2.boundingRect(cnt)
                     aspect_ratio = bh / max(1, bw)
-                    # Cristais costumam ser ligeiramente verticais ou compactos
-                    if 0.35 <= aspect_ratio <= 3.2:
-                        cx = x + bw // 2
-                        cy = y + bh // 2
-                        
-                        # Score multi-critério: Área + Pureza de Cor + Proximidade
-                        area_norm = min(1.0, area / 1500.0)
-                        aspect_score = 1.0 - abs(aspect_ratio - 1.2) * 0.2
-                        confidence = min(0.99, max(0.60, 0.65 * area_norm + 0.35 * aspect_score))
-                        
-                        valid_crystals.append((confidence, (x, y, bw, bh), (cx, cy)))
+                    if 0.5 <= aspect_ratio <= 3.0:
+                        # Verifica densidade de pixels azuis brilhantes na ROI
+                        roi_mask = mask[y:y + bh, x:x + bw]
+                        blue_density = np.count_nonzero(roi_mask) / float(bw * bh)
+                        if blue_density >= 0.25:
+                            cx = x + bw // 2
+                            cy = y + bh // 2
+                            confidence = min(0.99, max(0.88, 0.88 + blue_density * 0.10))
+                            valid_crystals.append((confidence, (x, y, bw, bh), (cx, cy)))
 
             if valid_crystals:
-                # Prioriza o maior e mais confiável cristal azul (HEALING_CRYSTAL)
                 best_conf, best_bbox, best_center = max(valid_crystals, key=lambda item: item[0])
                 elem = UIElement(
                     name="blue_crystal",
@@ -218,14 +200,13 @@ class LandmarkDetector:
                     center=best_center,
                     semantic_type="HEALING_CRYSTAL",
                 )
-                dx = best_center[0] - ref_x
-                dy = best_center[1] - ref_y
-                return True, (dx, dy), elem
+                return True, (best_center[0] - ref_x, best_center[1] - ref_y), elem
+
+            return False, None, None
 
         except Exception as e:
-            self.logger.debug(f"Erro tolerado em LandmarkDetector: {e}")
-
-        return False, None, None
+            self.logger.debug(f"Erro em detect_crystal: {e}")
+            return False, None, None
 
     def detect_interaction_prompt(
         self,

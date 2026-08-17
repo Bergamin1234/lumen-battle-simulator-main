@@ -16,6 +16,7 @@ logger = logging.getLogger("LumenaSkillScanner")
 def run_debug_skill_scan(
     frame: Optional[np.ndarray] = None,
     output_dir: Optional[str] = None,
+    in_battle: bool = True,
 ) -> Dict[str, Any]:
     """Captura ou recebe o frame atual, detecta N slots de habilidades visualmente,
 
@@ -42,8 +43,8 @@ def run_debug_skill_scan(
     raw_path = os.path.join(target_dir, "screenshot.png")
     cv2.imwrite(raw_path, captured_frame)
 
-    # 2. Executa a detecção visual de N slots
-    detected_skills: List[SkillSlot] = analyzer.detect_skill_slots(captured_frame, in_battle=True)
+    # 2. Executa a detecção visual de N slots estritamente em combate
+    detected_skills: List[SkillSlot] = analyzer.detect_skill_slots(captured_frame, in_battle=in_battle)
 
     # 3. Cria a imagem anotada com overlays visuais
     annotated = captured_frame.copy()

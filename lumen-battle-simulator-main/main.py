@@ -12,7 +12,7 @@ import logging
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="LumenaBot",
-        description="Lumena Bot Control Center v4.4 — Autonomous Agent Suite",
+        description="Lumena Bot Control Center v5.0 — Autonomous Industrial Master Suite",
     )
     parser.add_argument("--version", action="store_true", help="Exibe a versão atual do sistema e encerra")
     parser.add_argument("--cli", action="store_true", help="Executa o motor central em modo linha de comando (sem GUI)")
@@ -24,8 +24,8 @@ def main() -> None:
     args, unknown = parser.parse_known_args()
 
     if args.version:
-        print("Lumena Bot Control Center v4.4 — Autonomous Agent Suite")
-        print("Build: v4.4 Master | Python 3.12 | Win32 API WebGL Engine")
+        print("Lumena Bot Control Center v4.4 / v5.0 Master Industrial — Autonomous Industrial Master Suite")
+        print("Build: v5.0 Master Industrial | Python 3.12 | Win32 API WebGL Engine")
         sys.exit(0)
 
     if args.field_trial:

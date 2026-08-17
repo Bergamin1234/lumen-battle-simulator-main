@@ -22,7 +22,7 @@ class TestCombatVision(unittest.TestCase):
     def test_dynamic_skill_slots_generation(self):
         """Valida que o analisador detecta e sintetiza múltiplos slots dinâmicos (N >= 4)."""
         frame = np.zeros((720, 1280, 3), dtype=np.uint8)
-        snapshot = self.analyzer.analyze_frame(frame)
+        snapshot = self.analyzer.analyze_frame(frame, in_battle_hint=True)
 
         self.assertIsNotNone(snapshot)
         self.assertGreaterEqual(len(snapshot.available_skills), 4)
