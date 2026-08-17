@@ -495,6 +495,70 @@ class BattleUIController:
 
         return dispatched, latency, verified
 
+    def dispatch_skill_action(
+        self,
+        slot_index: int = 1,
+        frame: Optional[np.ndarray] = None,
+        screen_capture_func: Optional[Any] = None,
+    ) -> bool:
+        """
+        Despacha formalmente uma ação de habilidade pelo índice do slot (1 a 4).
+        Retorna True se despachado com sucesso.
+        """
+        skills = self.find_available_skills(frame) if frame is not None else []
+        selected_slot: Optional[SkillSlot] = None
+        for s in skills:
+            if s.slot_index == slot_index or s.index == slot_index:
+                selected_slot = s
+                break
+
+        if selected_slot is None:
+            bounds = self.input_ctrl.window_manager.get_window_bounds()
+            wx, wy, ww, wh = bounds
+            w = ww if ww > 0 else 1920
+            h = wh if wh > 0 else 1080
+
+            bx = int(wx + w * 0.26)
+            by = int(wy + h * 0.70)
+            slot_w = int(w * 0.22)
+            slot_h = int(h * 0.10)
+            col = (slot_index - 1) % 2
+            row = (slot_index - 1) // 2
+            sx = bx + col * (slot_w + int(w * 0.03))
+            sy = by + row * (slot_h + int(h * 0.03))
+
+            selected_slot = SkillSlot(
+                id=f"skill_slot_{slot_index}",
+                index=slot_index,
+                slot_index=slot_index,
+                screen_x=sx,
+                screen_y=sy,
+                width=slot_w,
+                height=slot_h,
+                available=True,
+                cooldown=0.0,
+                hotkey=str(slot_index % 10),
+                skill_name=f"Skill #{slot_index}",
+                element=Element.NORMAL,
+                confidence=0.85,
+            )
+
+        dispatched, latency, verified = self.execute_skill(
+            selected_slot,
+            frame_before=frame,
+            screen_capture_func=screen_capture_func,
+        )
+        return bool(dispatched)
+
+    def handle_post_battle_modal_dismissal(
+        self,
+        frame: Optional[np.ndarray] = None,
+        screen_capture_func: Optional[Any] = None,
+    ) -> bool:
+        """Despacha a confirmação de fechamento de modais pós-combate e retorna True se bem-sucedido."""
+        dispatched, _ = self.dismiss_post_battle_modal(frame=frame, screen_capture_func=screen_capture_func)
+        return bool(dispatched)
+
     def execute_complete_combat_turn(
         self,
         frame_before: np.ndarray,

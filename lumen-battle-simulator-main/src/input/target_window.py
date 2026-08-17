@@ -63,6 +63,17 @@ class TargetWindowManager:
         "lumena bot control center",
     ]
 
+    # Lista Negra Estrita de abas e janelas alheias que NÃO devem ser capturadas
+    BLACKLISTED_TITLES = [
+        "gemini",
+        "chatgpt",
+        "claude",
+        "google search",
+        "pesquisa google",
+        "visual studio code",
+        "vscode",
+    ]
+
     def __init__(self, target_titles: Optional[List[str]] = None) -> None:
         self.logger = logging.getLogger("LumenaWindow")
         self.event_bus = EventBus()
@@ -79,6 +90,14 @@ class TargetWindowManager:
         self._current_target: Optional[TargetWindowInfo] = None
         self._last_focus_time = 0.0
         self._own_pid = os.getpid()
+
+    def is_blacklisted(self, title: str) -> bool:
+        """Verifica se a janela ou aba pertence a uma aplicação da lista negra."""
+        t_lower = (title or "").lower()
+        for b in self.BLACKLISTED_TITLES:
+            if b in t_lower:
+                return True
+        return False
 
     def is_own_window(self, hwnd: int, pid: int, title: str, process_name: str = "") -> bool:
         """Verifica se a janela pertence ao próprio processo ou interface do LumenaBot."""
@@ -259,6 +278,9 @@ class TargetWindowManager:
             if is_self:
                 is_valid = False
                 rejection_reason = "self_process"
+            elif self.is_blacklisted(title_str):
+                is_valid = False
+                rejection_reason = "blacklisted_title"
             elif not is_visible:
                 is_valid = False
                 rejection_reason = "not_visible"
@@ -342,13 +364,24 @@ class TargetWindowManager:
         return target
 
     def find_target_window(self) -> Optional[TargetWindowInfo]:
-        """Localiza automaticamente a janela real do Google Chrome/Lumena.gg, rejeitando a janela do bot."""
+        """Localiza automaticamente a janela real do Google Chrome com Lumena.gg, rejeitando abas alheias."""
         candidates = self.list_browser_candidates()
-        valid_candidates = [c for c in candidates if c.is_valid_candidate and not c.is_self_process]
+        valid_candidates = [
+            c for c in candidates
+            if c.is_valid_candidate and not c.is_self_process and not self.is_blacklisted(c.window_title)
+        ]
 
         if not valid_candidates:
             self._current_target = None
-            self.logger.warning("[TARGET] Nenhuma janela de navegador Chrome/Lumena.gg válida foi encontrada.")
+            self.logger.warning("❌ Nenhuma aba do Lumena encontrada no Chrome. Abra o site https://lumena.gg no navegador.")
+            return None
+
+        # Prioridade 1: Janela/Aba cujo título contenha explicitamente 'Lumena' ou 'lumena.gg'
+        lumena_candidates = [c for c in valid_candidates if "lumena" in c.window_title.lower()]
+
+        if not lumena_candidates:
+            self._current_target = None
+            self.logger.warning("❌ Nenhuma aba do Lumena encontrada no Chrome. Abra o site https://lumena.gg no navegador.")
             return None
 
         def score_candidate(cand: TargetWindowInfo) -> int:
@@ -366,11 +399,11 @@ class TargetWindowManager:
                 score += 10
             return score
 
-        valid_candidates.sort(key=score_candidate, reverse=True)
-        best_candidate = valid_candidates[0]
+        lumena_candidates.sort(key=score_candidate, reverse=True)
+        best_candidate = lumena_candidates[0]
 
         self._current_target = best_candidate
-        self.logger.info(f"✓ [TARGET] Janela Alvo Selecionada Automaticamente: '{best_candidate.window_title}' (HWND: {best_candidate.hwnd}, PID: {best_candidate.pid}, Processo: {best_candidate.process_name})")
+        self.logger.info(f"✓ [TARGET] Janela Lumena.gg Selecionada Automaticamente: '{best_candidate.window_title}' (HWND: {best_candidate.hwnd}, PID: {best_candidate.pid}, Processo: {best_candidate.process_name})")
         return best_candidate
 
     def get_active_target(self) -> Optional[TargetWindowInfo]:
