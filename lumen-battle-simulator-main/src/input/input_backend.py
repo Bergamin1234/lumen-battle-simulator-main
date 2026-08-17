@@ -120,9 +120,12 @@ class Win32InputBackend(InputBackend):
             ii_ = Input_I()
             ii_.ki = KeyBdInput(vk, sc, KEYEVENTF_SCANCODE, 0, None)
             x = Input(ctypes.c_ulong(INPUT_KEYBOARD), ii_)
-            user32.SendInput(1, ctypes.byref(x), ctypes.sizeof(Input))
-        except Exception:
-            pass
+            inserted = user32.SendInput(1, ctypes.byref(x), ctypes.sizeof(Input))
+            if inserted == 0:
+                err = kernel32.GetLastError()
+                self.logger.warning(f"⚠️ [INPUT] SendInput key_down({key}) retornou 0 eventos inseridos (GetLastError={err}).")
+        except Exception as e:
+            self.logger.debug(f"SendInput key_down exception: {e}")
 
         # 2. DirectInput keybd_event
         try:
@@ -151,9 +154,12 @@ class Win32InputBackend(InputBackend):
             ii_ = Input_I()
             ii_.ki = KeyBdInput(vk, sc, KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP, 0, None)
             x = Input(ctypes.c_ulong(INPUT_KEYBOARD), ii_)
-            user32.SendInput(1, ctypes.byref(x), ctypes.sizeof(Input))
-        except Exception:
-            pass
+            inserted = user32.SendInput(1, ctypes.byref(x), ctypes.sizeof(Input))
+            if inserted == 0:
+                err = kernel32.GetLastError()
+                self.logger.warning(f"⚠️ [INPUT] SendInput key_up({key}) retornou 0 eventos inseridos (GetLastError={err}).")
+        except Exception as e:
+            self.logger.debug(f"SendInput key_up exception: {e}")
 
         # 2. DirectInput keybd_event keyup
         try:

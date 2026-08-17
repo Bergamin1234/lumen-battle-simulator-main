@@ -26,6 +26,8 @@ from src.telemetry.telemetry_manager import TelemetryManager
 from src.core.event_bus import EventBus, EventType
 from src.perception.battle_ui_detector import BattleUIDetector, BattleUIDetectionResult
 from src.combat.battle_ui_controller import BattleUIController
+from src.telemetry.blackbox_recorder import BlackboxFlightRecorder
+from src.automation.self_healing_engine import SelfHealingEngine
 
 logger = logging.getLogger("LumenaMacro")
 
@@ -88,6 +90,15 @@ class LumenaBotEngine:
             event_bus=self.event_bus,
             state_machine=self.fsm,
             release_keys_callback=lambda: self.input_ctrl.backend.release_all_keys() if hasattr(self.input_ctrl, "backend") and hasattr(self.input_ctrl.backend, "release_all_keys") else None,
+        )
+        # v4.2 Blackbox Flight Recorder (15s Ring Buffer in RAM)
+        self.blackbox = BlackboxFlightRecorder(buffer_size=150)
+
+        # v4.3 Self-Healing Runtime Engine
+        self.self_healing = SelfHealingEngine(
+            window_manager=self.input_ctrl.window_manager,
+            input_controller=self.input_ctrl,
+            event_bus=self.event_bus,
         )
 
         # Modos de Execução: 'AUTONOMOUS', 'ASSISTED', 'MANUAL'
@@ -241,6 +252,7 @@ class LumenaBotEngine:
         self.fsm.transition_to(BotState.EMERGENCY_STOP, reason="Parada de Emergência Solicitada")
         self._running = False
         self._stop_event.set()
+        self.blackbox.dump_blackbox(reason="EMERGENCY_STOP")
         self.telemetry.update_agent_status(
             state="EMERGENCY_STOP",
             objective="Parada de Emergência",
@@ -299,6 +311,25 @@ class LumenaBotEngine:
             time.sleep(0.2)
             return
 
+        # 1.1 Detecção Dinâmica de Canvas Bounds & Letterboxing (Módulo 0)
+        canvas_bounds = self.screen_capture.detect_webgl_canvas_bounds(frame)
+        self.health_monitor["canvas_bounds"] = canvas_bounds
+        self.health_monitor["is_letterboxed"] = self.screen_capture.is_letterboxed
+
+        # 1.2 Self-Healing: Detecção de Congelamento WebGL e Popups Intrusivos (Módulo 2)
+        if self._running and not self._paused:
+            self.self_healing.detect_and_recover_webgl_freeze(frame)
+            self.self_healing.auto_dismiss_unexpected_popups(frame)
+
+        # 1.3 Gravação no Blackbox Flight Recorder em Memória (Módulo 3)
+        self.blackbox.record_step(
+            frame=frame,
+            state_name=self.fsm.current_state.name,
+            last_input=self.health_monitor.get("last_input", ""),
+            events=[e.__dict__ for e in self.event_bus.get_recent_events(5) if hasattr(e, "__dict__")],
+            extra_metrics={"hp_ratio": self.health_monitor.get("hp_ratio", "100%"), "state": self.fsm.current_state.name},
+        )
+
         # 2. INTERPRET: Classificação de Estado e Detecção Multimodal
         snapshot = self.state_classifier.classify_frame(frame, timestamp=timestamp)
         self._last_state_snapshot = snapshot
@@ -308,6 +339,25 @@ class LumenaBotEngine:
         # 2.1 Análise Visual de Combate Dinâmico (SkillScanner & EnemyVision)
         combat_snapshot = self.combat_vision.analyze_frame(frame, timestamp=timestamp)
         bt = snapshot.battle_telemetry
+
+        # 2.2 Blindagem de Resiliência: Detecção de Desconexão de Rede e Tela de Carregamento
+        in_battle = bool((bt and bt.in_battle) or (combat_snapshot and combat_snapshot.in_battle))
+
+        if not in_battle:
+            if self._detect_network_disconnect(frame, snapshot=snapshot):
+                self.logger.warning("🌐 [RESILIENCE] Queda de conexão detectada! Transicionando para NETWORK_RECONNECTING e acionando recarga.")
+                self.fsm.transition_to(BotState.NETWORK_RECONNECTING, reason="Perda de Conexão")
+                self.input_ctrl.press_key("f5", duration=0.2)
+                self.health_monitor["state"] = "NETWORK_RECONNECTING"
+                return
+
+            if "black_screen" in snapshot.ui_elements or snapshot.screen_state == AgentState.CALIBRATING:
+                self.logger.debug("⏳ [RESILIENCE] Tela de carregamento / transição detectada.")
+                self.fsm.transition_to(BotState.LOADING_SCREEN, reason="Tela de Carregamento")
+                self._last_physical_action_time = time.time()
+                self._last_combat_action_time = time.time()
+                self.health_monitor["state"] = "LOADING_SCREEN"
+                return
 
         # Atualiza métricas de monitoramento em tempo real (Regra #18 e #19)
         target_info = self.input_ctrl.window_manager._current_target
@@ -792,6 +842,27 @@ class LumenaBotEngine:
             level="INFO",
             message=f"Manobra de desengate {self._recovery_attempts}/3 executada.",
         )
+
+    def _detect_network_disconnect(self, frame: np.ndarray, snapshot: Optional[StateSnapshot] = None) -> bool:
+        """Detecta pop-up ou estado visual de desconexão de rede (ex: 'Connection Lost', 'Reload', overlay cinza)."""
+        if snapshot is not None and snapshot.battle_telemetry and snapshot.battle_telemetry.in_battle:
+            return False
+
+        if frame is None or frame.size == 0:
+            return False
+
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if len(frame.shape) == 3 else frame
+        std_dev = float(np.std(gray))
+        mean_val = float(np.mean(gray))
+
+        # Mede saturação de cor: overlay de desconexão é acromático (cinza/dessaturado)
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV) if len(frame.shape) == 3 else None
+        mean_sat = float(np.mean(hsv[:, :, 1])) if hsv is not None else 0.0
+
+        # Se for um overlay cinza uniforme característico de desconexão (std_dev baixo, mean intermediário e baixa saturação)
+        if std_dev < 15.0 and 30 < mean_val < 110 and mean_sat < 25.0:
+            return True
+        return False
 
     def _handle_healing_cycle(self, snapshot: StateSnapshot, frame: Optional[np.ndarray] = None) -> None:
         """Processa recuperação de vida e PP no ponto de cura com aproximação tática e interação em malha fechada."""

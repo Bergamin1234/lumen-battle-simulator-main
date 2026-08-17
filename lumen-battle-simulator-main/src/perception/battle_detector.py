@@ -138,6 +138,10 @@ class BattleDetector:
         if roi is None or roi.size == 0:
             return None
 
+        # Se a ROI for completamente preta (ex: tela preta/loading), não é uma barra de HP
+        if float(np.mean(roi)) < 6.0:
+            return None
+
         hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
 
         # Verde (HP alto)

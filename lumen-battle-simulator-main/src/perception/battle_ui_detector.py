@@ -15,6 +15,7 @@ import numpy as np
 import cv2
 
 from src.core.event_bus import EventBus, EventType
+from src.perception.hp_bar_parser import HPBarParser
 
 logger = logging.getLogger("LumenaBattleUIDetector")
 
@@ -70,6 +71,10 @@ class BattleUIDetectionResult:
     modal_confirm_button: Optional[BattleUIElement] = None
     elements: Dict[str, BattleUIElement] = field(default_factory=dict)
     roi_used: Optional[Tuple[int, int, int, int]] = None
+    canvas_bounds: Optional[Tuple[int, int, int, int]] = None
+    player_hp_ratio: float = 1.0
+    enemy_hp_ratio: float = 1.0
+    active_targets: List[Tuple[int, int]] = field(default_factory=list)
 
 
 class BattleUIDetector:
@@ -79,6 +84,7 @@ class BattleUIDetector:
     ROI_ENEMY_STATUS: Tuple[float, float, float, float] = (0.35, 0.05, 0.60, 0.30)
     ROI_PLAYER_STATUS: Tuple[float, float, float, float] = (0.02, 0.65, 0.35, 0.32)
     ROI_MODALS: Tuple[float, float, float, float] = (0.20, 0.20, 0.60, 0.60)
+    ROI_ARENA_TARGETS: Tuple[float, float, float, float] = (0.30, 0.15, 0.65, 0.50)
 
     def __init__(
         self,
@@ -89,9 +95,10 @@ class BattleUIDetector:
         self.event_bus = event_bus or EventBus()
         self.template_dir = template_dir or os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "templates", "battle"))
         self.templates: Dict[str, np.ndarray] = {}
+        self.hp_parser = HPBarParser()
         self._load_templates()
 
-        # ROI Padrão para Controles de Batalha (Canto inferior direito: 50% a 100% largura, 55% a 100% altura)
+        # ROI Padrão para Controles de Batalha (Canto inferior direito)
         self.hud_roi_norm = self.ROI_BATTLE_ACTIONS
 
     def _load_templates(self) -> None:
@@ -414,18 +421,76 @@ class BattleUIDetector:
 
         return False, "NONE", None
 
-    def analyze_battle_ui(self, frame: Optional[np.ndarray]) -> BattleUIDetectionResult:
+    def detect_active_targets(
+        self,
+        frame: np.ndarray,
+        canvas_bounds: Optional[Tuple[int, int, int, int]] = None,
+    ) -> List[Tuple[int, int]]:
+        """
+        Detecta um ou múltiplos alvos (monstros/inimigos/bosses) na arena de combate.
+        Retorna lista de centros (target_x, target_y) ordenados da esquerda para a direita.
+        """
+        if frame is None or frame.size == 0:
+            return []
+
+        h, w = frame.shape[:2]
+        cx, cy, cw, ch = canvas_bounds if canvas_bounds else (0, 0, w, h)
+
+        nx, ny, nw, nh = self.ROI_ARENA_TARGETS
+        rx = int(cx + nx * cw)
+        ry = int(cy + ny * ch)
+        rw = int(nw * cw)
+        rh = int(nh * ch)
+
+        roi = frame[ry:ry + rh, rx:rx + rw]
+        if roi.size == 0:
+            return [(int(cx + 0.65 * cw), int(cy + 0.35 * ch))]
+
+        # Detecção de contornos salientes de entidades no plano de batalha
+        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+        blurred = cv2.GaussianBlur(gray, (7, 7), 0)
+        edges = cv2.Canny(blurred, 35, 110)
+
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        targets: List[Tuple[int, int]] = []
+
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if (rw * rh * 0.015) < area < (rw * rh * 0.45):
+                bx, by, bw, bh = cv2.boundingRect(cnt)
+                aspect = bw / max(1, bh)
+                if 0.4 <= aspect <= 2.8 and bw >= 25 and bh >= 25:
+                    target_center_x = rx + bx + bw // 2
+                    target_center_y = ry + by + bh // 2
+                    targets.append((target_center_x, target_center_y))
+
+        # Se nenhum contorno específico for isolado, fornece o centro padrão da arena do inimigo
+        if not targets:
+            targets.append((int(cx + 0.65 * cw), int(cy + 0.35 * ch)))
+        else:
+            targets.sort(key=lambda t: t[0])  # Ordena da esquerda para a direita
+
+        return targets
+
+    def analyze_battle_ui(
+        self,
+        frame: Optional[np.ndarray],
+        canvas_bounds: Optional[Tuple[int, int, int, int]] = None,
+    ) -> BattleUIDetectionResult:
         """Executa a análise completa da interface de batalha e computa a pontuação de confirmação."""
         now = time.time()
         if frame is None or frame.size == 0:
             return BattleUIDetectionResult(timestamp=now)
 
         h, w = frame.shape[:2]
+        cb = canvas_bounds if canvas_bounds else (0, 0, w, h)
+        cx, cy, cw, ch = cb
+
         roi_rect = (
-            int(w * self.hud_roi_norm[0]),
-            int(h * self.hud_roi_norm[1]),
-            int(w * self.hud_roi_norm[2]),
-            int(h * self.hud_roi_norm[3]),
+            int(cx + cw * self.hud_roi_norm[0]),
+            int(cy + ch * self.hud_roi_norm[1]),
+            int(cw * self.hud_roi_norm[2]),
+            int(ch * self.hud_roi_norm[3]),
         )
 
         fight_elem = self.detect_fight_button(frame, roi_rect=roi_rect)
@@ -435,6 +500,26 @@ class BattleUIDetector:
         enemy_hp_elem = self.detect_enemy_hp_bar(frame)
         skill_menu_open, skill_elements = self.detect_skill_menu(frame)
         modal_detected, modal_type, modal_confirm_elem = self.detect_post_battle_modal(frame)
+
+        # Extração de HP via HPBarParser
+        p_roi_box = (
+            int(cx + cw * self.ROI_PLAYER_STATUS[0]),
+            int(cy + ch * self.ROI_PLAYER_STATUS[1]),
+            int(cw * self.ROI_PLAYER_STATUS[2]),
+            int(ch * self.ROI_PLAYER_STATUS[3]),
+        )
+        e_roi_box = (
+            int(cx + cw * self.ROI_ENEMY_STATUS[0]),
+            int(cy + ch * self.ROI_ENEMY_STATUS[1]),
+            int(cw * self.ROI_ENEMY_STATUS[2]),
+            int(ch * self.ROI_ENEMY_STATUS[3]),
+        )
+
+        p_roi = frame[p_roi_box[1]:p_roi_box[1] + p_roi_box[3], p_roi_box[0]:p_roi_box[0] + p_roi_box[2]]
+        e_roi = frame[e_roi_box[1]:e_roi_box[1] + e_roi_box[3], e_roi_box[0]:e_roi_box[0] + e_roi_box[2]]
+
+        player_hp_ratio, enemy_hp_ratio = self.hp_parser.parse_player_and_enemy_hp(p_roi, e_roi)
+        active_targets = self.detect_active_targets(frame, canvas_bounds=cb)
 
         # Computa battle_ui_score ponderado
         fight_score = fight_elem.confidence * 0.45 if fight_elem.is_present else 0.0
@@ -475,6 +560,10 @@ class BattleUIDetector:
             modal_confirm_button=modal_confirm_elem,
             elements=elements,
             roi_used=roi_rect,
+            canvas_bounds=cb,
+            player_hp_ratio=round(player_hp_ratio, 3),
+            enemy_hp_ratio=round(enemy_hp_ratio, 3),
+            active_targets=active_targets,
         )
 
         if modal_detected:
@@ -495,6 +584,7 @@ class BattleUIDetector:
                     "fight_present": fight_elem.is_present,
                     "skill_menu_open": skill_menu_open,
                     "enemy_hp_present": enemy_hp_elem.is_present,
+                    "targets_count": len(active_targets),
                 },
                 category="PERCEPTION",
                 level="INFO",

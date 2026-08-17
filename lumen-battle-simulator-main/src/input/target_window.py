@@ -389,6 +389,84 @@ class TargetWindowManager:
         diag = self.bring_to_foreground_with_diagnostic(hwnd)
         return bool(diag.is_truly_in_foreground or diag.hwnd == 1001)
 
+    def ensure_foreground(self, hwnd: Optional[int] = None) -> bool:
+        """Garante que a janela alvo está em primeiro plano (alias para bring_to_foreground)."""
+        return self.bring_to_foreground(hwnd)
+
+    def check_process_elevation_compatibility(self, target_hwnd: Optional[int] = None) -> Tuple[bool, str]:
+        """
+        Verifica se há incompatibilidade de elevação/UIPI (User Interface Privilege Isolation)
+        entre o processo do bot e o processo da janela alvo (Chrome).
+        Retorna (is_compatible, status_string).
+        """
+        target = self._current_target if target_hwnd is None else None
+        hwnd = target_hwnd or (target.hwnd if target else 0)
+        if not hwnd or hwnd <= 0:
+            return True, "NO_TARGET_SPECIFIED"
+
+        try:
+            advapi32 = getattr(ctypes.windll, "advapi32", None)
+            if not advapi32:
+                return True, "COMPATIBLE"
+
+            TOKEN_QUERY = 0x0008
+            TokenElevation = 20
+
+            class TOKEN_ELEVATION(ctypes.Structure):
+                _fields_ = [("TokenIsElevated", ctypes.c_ulong)]
+
+            def is_pid_elevated(pid: int) -> Optional[bool]:
+                if not pid or pid <= 0:
+                    return None
+                PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+                h_proc = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+                if not h_proc:
+                    return None
+                try:
+                    h_token = ctypes.wintypes.HANDLE()
+                    if not advapi32.OpenProcessToken(h_proc, TOKEN_QUERY, ctypes.byref(h_token)):
+                        return None
+                    try:
+                        elev = TOKEN_ELEVATION()
+                        cb_size = ctypes.c_ulong(ctypes.sizeof(TOKEN_ELEVATION))
+                        ret_len = ctypes.c_ulong()
+                        if advapi32.GetTokenInformation(h_token, TokenElevation, ctypes.byref(elev), cb_size, ctypes.byref(ret_len)):
+                            return bool(elev.TokenIsElevated != 0)
+                    finally:
+                        kernel32.CloseHandle(h_token)
+                finally:
+                    kernel32.CloseHandle(h_proc)
+                return None
+
+            own_elevated = is_pid_elevated(os.getpid())
+
+            target_pid = ctypes.c_ulong()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(target_pid))
+            t_pid = int(target_pid.value)
+
+            target_elevated = is_pid_elevated(t_pid)
+
+            if target_elevated is True and own_elevated is False:
+                msg = (
+                    f"⚠️ [UIPI ELEVATION MISMATCH] O processo alvo (PID {t_pid}) está executando com privilégios de "
+                    f"Administrador, enquanto o Lumena Bot está executando sem elevação. O Windows UIPI bloqueará "
+                    f"silenciosamente eventos de SendInput. Execute o Lumena Bot como Administrador."
+                )
+                self.logger.warning(msg)
+                self.event_bus.publish(
+                    EventType.WARNING_UIPI_ELEVATION_MISMATCH,
+                    data={"target_pid": t_pid, "target_hwnd": hwnd, "own_pid": os.getpid()},
+                    category="SECURITY",
+                    level="WARNING",
+                    message=msg,
+                )
+                return False, "WARNING_UIPI_ELEVATION_MISMATCH"
+
+            return True, "COMPATIBLE"
+        except Exception as e:
+            self.logger.debug(f"Erro ao verificar elevação de token: {e}")
+            return True, "CHECK_SKIPPED"
+
     def bring_to_foreground_with_diagnostic(self, hwnd: Optional[int] = None) -> FocusDiagnosticResult:
         """Eleva a janela alvo para primeiro plano e diagnostica formalmente se o foco real foi obtido."""
         target_info = self.find_target_window() if hwnd is None else (self._current_target or self.find_target_window())

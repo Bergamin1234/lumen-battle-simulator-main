@@ -21,6 +21,8 @@ from src.input.target_window import TargetWindowManager, WindowInfo, FocusDiagno
 from src.core.event_bus import EventBus, EventType, BotEvent
 from src.perception.combat_vision import CombatVisionAnalyzer
 from src.models.combat_vision import CombatSnapshot, SkillSlot, EnemyTarget
+from src.ui.canvas_inspector_overlay import CanvasInspectorOverlay
+from src.telemetry.replay_viewer import BlackboxReplayEngine
 
 logger = logging.getLogger("LumenaGUI")
 
@@ -62,6 +64,8 @@ class ModernLumenaGUI:
         self.event_bus = EventBus()
         self.input_ctrl = self.bot_controller.engine.input_ctrl
         self.combat_vision = CombatVisionAnalyzer()
+        self.canvas_inspector = CanvasInspectorOverlay()
+        self.replay_engine = BlackboxReplayEngine()
 
         # Fila thread-safe de eventos para a GUI
         self.gui_event_queue = self.event_bus.get_or_create_queue("gui_consumer")
@@ -313,6 +317,35 @@ class ModernLumenaGUI:
         self.dash_canvas = tk.Canvas(game_box, bg="#000000", highlightthickness=0)
         self.dash_canvas.pack(fill="both", expand=True, pady=4)
 
+        # v4.2 Painel de Combate, Cooldowns e Canvas Viewport
+        dash_combat_panel = tk.Frame(game_box, bg=THEME["bg_card_alt"], padx=8, pady=6, highlightthickness=1, highlightbackground=THEME["border"])
+        dash_combat_panel.pack(fill="x", pady=(4, 0))
+
+        # Linha de HP e Canvas
+        hp_row = tk.Frame(dash_combat_panel, bg=THEME["bg_card_alt"])
+        hp_row.pack(fill="x", pady=(0, 4))
+
+        self.dash_player_hp_lbl = tk.Label(hp_row, text="PLAYER HP: 100%", bg=THEME["bg_card_alt"], fg="#10B981", font=(THEME["font_family"], 9, "bold"))
+        self.dash_player_hp_lbl.pack(side="left", padx=4)
+
+        self.dash_enemy_hp_lbl = tk.Label(hp_row, text="ENEMY HP: 100%", bg=THEME["bg_card_alt"], fg="#EF4444", font=(THEME["font_family"], 9, "bold"))
+        self.dash_enemy_hp_lbl.pack(side="left", padx=8)
+
+        self.dash_viewport_lbl = tk.Label(hp_row, text="CANVAS: (0, 0, 1920, 1080) | LETTERBOX: OFF", bg=THEME["bg_card_alt"], fg="#94A3B8", font=("Consolas", 8))
+        self.dash_viewport_lbl.pack(side="right", padx=4)
+
+        # Linha dos 4 Slots de Habilidades e Cooldown
+        skills_row = tk.Frame(dash_combat_panel, bg=THEME["bg_card_alt"])
+        skills_row.pack(fill="x")
+
+        self.dash_skill_labels = []
+        for i in range(1, 5):
+            s_box = tk.Frame(skills_row, bg=THEME["bg_card"], padx=6, pady=3, highlightthickness=1, highlightbackground=THEME["border"])
+            s_box.pack(side="left", fill="x", expand=True, padx=2)
+            lbl = tk.Label(s_box, text=f"SLOT #{i}: READY", bg=THEME["bg_card"], fg="#38BDF8", font=(THEME["font_family"], 8, "bold"))
+            lbl.pack()
+            self.dash_skill_labels.append(lbl)
+
         act_box = tk.Frame(split_frame, bg=THEME["bg_card"], width=390, padx=12, pady=10, highlightthickness=1, highlightbackground=THEME["border"])
         act_box.pack(side="right", fill="both", padx=(6, 0))
         act_box.pack_propagate(False)
@@ -321,6 +354,20 @@ class ModernLumenaGUI:
 
         self.dash_activity_text = tk.Text(act_box, bg=THEME["bg_dark"], fg="#6EE7B7", font=("Consolas", 9), bd=0, highlightthickness=0, wrap="word")
         self.dash_activity_text.pack(fill="both", expand=True)
+
+        # Botão dedicado de Diagnóstico Rápido
+        self.btn_live_smoke = tk.Button(
+            act_box,
+            text="🚀 RUN LIVE COMBAT SMOKE TEST",
+            bg="#2563EB",
+            fg="white",
+            font=(THEME["font_family"], 9, "bold"),
+            bd=0,
+            pady=6,
+            cursor="hand2",
+            command=self._on_run_live_combat_smoke_test,
+        )
+        self.btn_live_smoke.pack(fill="x", pady=(6, 0))
 
         return page
 
@@ -580,7 +627,6 @@ class ModernLumenaGUI:
 
     # -------------------------------------------------------------
     # 6. PÁGINA: VISION CENTER
-    # -------------------------------------------------------------
     def _create_vision_page(self) -> tk.Frame:
         page = tk.Frame(self.content_container, bg=THEME["bg_dark"])
 
@@ -589,16 +635,41 @@ class ModernLumenaGUI:
 
         v_head = tk.Frame(card, bg=THEME["bg_card"])
         v_head.pack(fill="x", pady=(0, 8))
-        tk.Label(v_head, text="👁️ VISION CENTER & DETECÇÕES SEMÂNTICAS", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(side="left")
+        tk.Label(v_head, text="👁️ VISION & REAL-TIME CALIBRATION INSPECTOR", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(side="left")
 
-        tk.Button(v_head, text="📸 Salvar Frame de Debug", bg=THEME["accent_blue"], fg="white", font=(THEME["font_family"], 9, "bold"), bd=0, padx=12, pady=5, command=self._on_save_debug_frame).pack(side="right")
+        btn_row = tk.Frame(v_head, bg=THEME["bg_card"])
+        btn_row.pack(side="right")
+        tk.Button(btn_row, text="🎬 BLACKBOX REPLAY", bg=THEME["accent_purple"], fg="white", font=(THEME["font_family"], 9, "bold"), bd=0, padx=10, pady=4, command=self._on_open_blackbox_replay_modal).pack(side="left", padx=4)
+        tk.Button(btn_row, text="⚡ FIELD TRIAL (3x)", bg=THEME["accent_primary"], fg="white", font=(THEME["font_family"], 9, "bold"), bd=0, padx=10, pady=4, command=self._on_run_field_trial_modal).pack(side="left", padx=4)
+        tk.Button(btn_row, text="📸 Salvar Frame", bg=THEME["accent_blue"], fg="white", font=(THEME["font_family"], 9, "bold"), bd=0, padx=10, pady=4, command=self._on_save_debug_frame).pack(side="left", padx=4)
 
         self.vision_canvas = tk.Canvas(card, bg="#000000", width=640, height=360, highlightthickness=0)
         self.vision_canvas.pack(anchor="center", pady=4)
 
-        self.vision_det_text = tk.Text(card, bg=THEME["bg_dark"], fg="#FDE047", font=("Consolas", 9), height=5, bd=0)
-        self.vision_det_text.pack(fill="x", pady=(6, 0))
-        self.vision_det_text.insert(tk.END, "DETECÇÕES SEMÂNTICAS ATIVAS:\n• [PLAYER]         Confiança: 0.95 | Coords: (960, 540)  | BBox: (930, 500, 60, 80)\n• [TARGET_ENEMY]   Confiança: 0.89 | Coords: (1344, 378) | BBox: (1200, 270, 300, 216)\n• [SKILL_BAR]      Detectados 6 slots dinâmicos | Status: 5 Available, 1 Cooldown\n• [BLUE_CRYSTAL]   Confiança: 0.92 | Coords: (1420, 320) | Âncora Topológica\n")
+        # Controles de Calibração Fina
+        calib_row = tk.Frame(card, bg=THEME["bg_card_alt"], padx=8, pady=6, highlightthickness=1, highlightbackground=THEME["border"])
+        calib_row.pack(fill="x", pady=(4, 6))
+
+        tk.Label(calib_row, text="⚙️ CALIBRAÇÃO DINÂMICA:", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 8, "bold")).pack(side="left", padx=(0, 10))
+
+        tk.Label(calib_row, text="Match Thresh:", bg=THEME["bg_card_alt"], fg=THEME["text_secondary"], font=(THEME["font_family"], 8)).pack(side="left")
+        self.slider_thresh = tk.Scale(calib_row, from_=0.50, to=0.95, resolution=0.05, orient="horizontal", bg=THEME["bg_card_alt"], fg="white", highlightthickness=0, length=90, command=lambda v: self.canvas_inspector.update_param("match_threshold", float(v)))
+        self.slider_thresh.set(0.70)
+        self.slider_thresh.pack(side="left", padx=4)
+
+        tk.Label(calib_row, text="HSV Tol:", bg=THEME["bg_card_alt"], fg=THEME["text_secondary"], font=(THEME["font_family"], 8)).pack(side="left", padx=(6, 0))
+        self.slider_hsv = tk.Scale(calib_row, from_=5, to=40, resolution=5, orient="horizontal", bg=THEME["bg_card_alt"], fg="white", highlightthickness=0, length=80, command=lambda v: self.canvas_inspector.update_param("hsv_tolerance", float(v)))
+        self.slider_hsv.set(20)
+        self.slider_hsv.pack(side="left", padx=4)
+
+        tk.Label(calib_row, text="Letterbox Thresh:", bg=THEME["bg_card_alt"], fg=THEME["text_secondary"], font=(THEME["font_family"], 8)).pack(side="left", padx=(6, 0))
+        self.slider_lb = tk.Scale(calib_row, from_=5, to=30, resolution=5, orient="horizontal", bg=THEME["bg_card_alt"], fg="white", highlightthickness=0, length=80, command=lambda v: self.canvas_inspector.update_param("letterbox_thresh", float(v)))
+        self.slider_lb.set(15)
+        self.slider_lb.pack(side="left", padx=4)
+
+        self.vision_det_text = tk.Text(card, bg=THEME["bg_dark"], fg="#FDE047", font=("Consolas", 9), height=4, bd=0)
+        self.vision_det_text.pack(fill="x", pady=(2, 0))
+        self.vision_det_text.insert(tk.END, "DETECÇÕES SEMÂNTICAS ATIVAS:\n• [CANVAS ACTIVE]  Limites WebGL Projetados em Verde Claro\n• [FIGHT BUTTON]   ROI de Batalha Projetada em Azul\n• [SKILL SLOTS]    4 Slots de Habilidades Projetados em Amarelo\n• [HP PARSER]      Barras de HP Projetadas em Ciano/Laranja\n")
 
         return page
 
@@ -1027,6 +1098,139 @@ class ModernLumenaGUI:
         except Exception:
             messagebox.showinfo("Evidências", f"Pasta de evidências: {os.path.abspath('debug')}")
 
+    # -------------------------------------------------------------
+    # MODAL DE REPRODUÇÃO FORENSE DO BLACKBOX (SESSION REPLAY VIEWER)
+    # -------------------------------------------------------------
+    def _on_open_blackbox_replay_modal(self) -> None:
+        modal = tk.Toplevel(self.root)
+        modal.title("🎬 Blackbox Session Replay Viewer — Lumena Bot v4.3")
+        modal.geometry("900x680")
+        modal.configure(bg=THEME["bg_card"])
+        modal.transient(self.root)
+
+        tk.Label(modal, text="🎬 BLACKBOX SESSION FORENSIC REPLAY VIEWER", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(pady=8)
+
+        # Seleção de Dump
+        top_bar = tk.Frame(modal, bg=THEME["bg_card"])
+        top_bar.pack(fill="x", padx=14, pady=4)
+
+        dumps = self.replay_engine.list_available_dumps()
+        dump_var = tk.StringVar()
+        if dumps:
+            dump_var.set(dumps[0])
+            self.replay_engine.load_dump_directory(dumps[0])
+
+        dump_dropdown = ttk.Combobox(top_bar, textvariable=dump_var, values=dumps, width=60, state="readonly")
+        dump_dropdown.pack(side="left", padx=4)
+
+        def on_select_dump(event=None):
+            sel = dump_var.get()
+            if sel:
+                self.replay_engine.load_dump_directory(sel)
+                update_display()
+
+        dump_dropdown.bind("<<ComboboxSelected>>", on_select_dump)
+
+        # Canvas de visualização
+        replay_canvas = tk.Canvas(modal, bg="#000000", width=640, height=360, highlightthickness=0)
+        replay_canvas.pack(pady=6)
+
+        # Controles de Reprodução
+        ctrl_bar = tk.Frame(modal, bg=THEME["bg_card"])
+        ctrl_bar.pack(pady=4)
+
+        slider_var = tk.IntVar(value=0)
+        _replay_img_ref = [None]
+
+        def update_display():
+            data = self.replay_engine.get_current_snapshot_data()
+            idx = data["index"]
+            total = max(1, data["total_frames"])
+            slider_var.set(idx)
+            frame = data["frame"]
+            if frame is not None:
+                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                im = Image.fromarray(rgb).resize((640, 360))
+                _replay_img_ref[0] = ImageTk.PhotoImage(im)
+                replay_canvas.delete("all")
+                replay_canvas.create_image(0, 0, anchor="nw", image=_replay_img_ref[0])
+            else:
+                replay_canvas.delete("all")
+                replay_canvas.create_text(320, 180, text=f"[ FRAME {idx}/{total} - SEM IMAGEM ]", fill="#64748B", font=(THEME["font_family"], 11, "bold"))
+
+            info_lbl.configure(
+                text=f"Frame: {idx+1}/{total} | Estado: {data['state']} | Input: {data['last_input']} | Time: {data.get('timestamp', 'N/A')}"
+            )
+
+        def on_step_back():
+            self.replay_engine.step_backward()
+            update_display()
+
+        def on_step_fwd():
+            self.replay_engine.step_forward()
+            update_display()
+
+        def on_slider(val):
+            self.replay_engine.seek(int(val))
+            update_display()
+
+        tk.Button(ctrl_bar, text="⏮ -1 Frame", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], bd=0, padx=10, pady=4, command=on_step_back).pack(side="left", padx=4)
+        tk.Button(ctrl_bar, text="▶ / ⏸ Play", bg=THEME["accent_primary"], fg="white", font=(THEME["font_family"], 9, "bold"), bd=0, padx=12, pady=4, command=lambda: self.replay_engine.toggle_play()).pack(side="left", padx=4)
+        tk.Button(ctrl_bar, text="⏭ +1 Frame", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], bd=0, padx=10, pady=4, command=on_step_fwd).pack(side="left", padx=4)
+
+        scale = tk.Scale(modal, from_=0, to=max(1, self.replay_engine.get_total_frames() - 1), orient="horizontal", variable=slider_var, command=on_slider, bg=THEME["bg_card"], fg="white", highlightthickness=0, length=640)
+        scale.pack(pady=4)
+
+        info_lbl = tk.Label(modal, text="Nenhum dump carregado", bg=THEME["bg_card"], fg="#38BDF8", font=("Consolas", 10))
+        info_lbl.pack(pady=4)
+
+        update_display()
+
+    # -------------------------------------------------------------
+    # MODAL DE TESTE DE CAMPO (FIELD TRIAL 3 CICLOS)
+    # -------------------------------------------------------------
+    def _on_run_field_trial_modal(self) -> None:
+        modal = tk.Toplevel(self.root)
+        modal.title("⚡ Teste de Campo Supervisionado (Field Trial 3x)")
+        modal.geometry("640x520")
+        modal.configure(bg=THEME["bg_card"])
+        modal.transient(self.root)
+
+        tk.Label(modal, text="⚡ FIELD TRIAL SUPERVISOR (3 CICLOS DE COMBATE)", bg=THEME["bg_card"], fg=THEME["text_primary"], font=(THEME["font_family"], 11, "bold")).pack(pady=10)
+
+        log_text = tk.Text(modal, bg=THEME["bg_dark"], fg="#6EE7B7", font=("Consolas", 9), height=18, bd=0)
+        log_text.pack(fill="both", expand=True, padx=14, pady=8)
+        log_text.insert(tk.END, "Aguardando início do Teste de Campo...\n")
+
+        status_lbl = tk.Label(modal, text="Status: PRONTO", bg=THEME["bg_card"], fg=THEME["text_secondary"], font=(THEME["font_family"], 10, "bold"))
+        status_lbl.pack(pady=4)
+
+        btn_row = tk.Frame(modal, bg=THEME["bg_card"])
+        btn_row.pack(pady=8)
+
+        def run_trial():
+            btn_start.configure(state="disabled", text="⏳ EXECUTANDO...")
+            log_text.insert(tk.END, "\n[FIELD TRIAL] Iniciando sessão supervisionada de 3 ciclos...\n")
+
+            def worker():
+                try:
+                    from scripts.diagnostics.run_field_trial import run_field_trial_session
+                    res = run_field_trial_session(num_cycles=3, dry_run=False)
+                    cat = res.get("validation_category", "NOT_VALIDATED")
+                    stat = res.get("status", "COMPLETE")
+                    modal.after(0, lambda: log_text.insert(tk.END, f"\n[RESULTADO] Status: {stat} | Categoria: {cat}\n"))
+                    modal.after(0, lambda: status_lbl.configure(text=f"Status: {stat} [{cat}]", fg="#10B981" if "VALIDATED" in cat else "#F59E0B"))
+                except Exception as e:
+                    modal.after(0, lambda: log_text.insert(tk.END, f"\n[ERRO] {e}\n"))
+                finally:
+                    modal.after(0, lambda: btn_start.configure(state="normal", text="▶ INICIAR TESTE DE CAMPO"))
+
+            threading.Thread(target=worker, daemon=True).start()
+
+        btn_start = tk.Button(btn_row, text="▶ INICIAR TESTE DE CAMPO", bg=THEME["accent_primary"], fg="white", font=(THEME["font_family"], 9, "bold"), bd=0, padx=14, pady=6, command=run_trial)
+        btn_start.pack(side="left", padx=6)
+        tk.Button(btn_row, text="[ FECHAR ]", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], bd=0, padx=12, pady=6, command=modal.destroy).pack(side="left", padx=6)
+
     def _on_export_diagnostic_package(self) -> None:
         try:
             os.makedirs("debug", exist_ok=True)
@@ -1117,6 +1321,27 @@ class ModernLumenaGUI:
             messagebox.showinfo("Visão", f"Frame de depuração salvo em:\n{path}")
         else:
             messagebox.showwarning("Visão", "Nenhum frame capturado no momento.")
+
+    def _on_run_live_combat_smoke_test(self) -> None:
+        """Executa o script de teste de fumaça de combate ao vivo em thread separada com feedback na UI."""
+        if hasattr(self, "btn_live_smoke"):
+            self.btn_live_smoke.configure(text="⏳ RUNNING SMOKE TEST...", state="disabled", bg=THEME["status_warning"])
+        self.dash_activity_text.insert(tk.END, "\n[SMOKE TEST] Iniciando teste de combate ao vivo...\n")
+        self.dash_activity_text.see(tk.END)
+
+        def worker():
+            try:
+                from scripts.diagnostics.live_combat_loop_test import run_live_combat_loop_test
+                res = run_live_combat_loop_test(max_wait_window_s=3, max_wait_battle_s=4)
+                status_str = "PASS (VALIDATED)" if res.get("physically_validated") else res.get("status", "COMPLETE")
+                self.root.after(0, lambda: self.dash_activity_text.insert(tk.END, f"[SMOKE TEST] Resultado: {status_str}\n"))
+            except Exception as e:
+                self.root.after(0, lambda: self.dash_activity_text.insert(tk.END, f"[SMOKE TEST ERROR] {e}\n"))
+            finally:
+                if hasattr(self, "btn_live_smoke"):
+                    self.root.after(0, lambda: self.btn_live_smoke.configure(text="🚀 RUN LIVE COMBAT SMOKE TEST", state="normal", bg="#2563EB"))
+
+        threading.Thread(target=worker, daemon=True).start()
 
     def _on_clear_memory(self) -> None:
         self.bot_controller.engine.memory_manager.world_memory = self.bot_controller.engine.memory_manager.world_memory.__class__()
@@ -1240,6 +1465,26 @@ class ModernLumenaGUI:
                     self.dash_activity_text.insert(tk.END, "\n".join(events))
                     self.dash_activity_text.see(tk.END)
 
+                # Atualiza métricas de HP, Skills e Canvas
+                if hasattr(self.bot_controller.engine, "health_monitor"):
+                    hm = self.bot_controller.engine.health_monitor
+                    p_hp = hm.get("player_hp", "100 / 100")
+                    hp_r = hm.get("hp_ratio", "100.0%")
+                    if hasattr(self, "dash_player_hp_lbl"):
+                        self.dash_player_hp_lbl.configure(text=f"PLAYER HP: {p_hp} ({hp_r})")
+
+                    cb = hm.get("canvas_bounds", (0, 0, 1920, 1080))
+                    lb = "ACTIVE" if hm.get("is_letterboxed") else "OFF"
+                    if hasattr(self, "dash_viewport_lbl"):
+                        self.dash_viewport_lbl.configure(text=f"CANVAS: {cb} | LETTERBOX: {lb}")
+
+                    if hasattr(self, "dash_skill_labels"):
+                        sel_sk = hm.get("selected_skill", "NONE")
+                        for idx, lbl in enumerate(self.dash_skill_labels, start=1):
+                            is_sel = f"#{idx}" in sel_sk
+                            color = "#10B981" if is_sel else "#38BDF8"
+                            lbl.configure(text=f"SLOT #{idx}: {'ACTIVE' if is_sel else 'READY'}", fg=color)
+
                 frame = self.bot_controller.get_latest_frame()
                 if frame is not None:
                     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -1266,7 +1511,15 @@ class ModernLumenaGUI:
             if self.current_page == "vision":
                 frame = self.bot_controller.get_latest_frame()
                 if frame is not None:
-                    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    hm = getattr(self.bot_controller.engine, "health_monitor", {})
+                    cb = hm.get("canvas_bounds", (0, 0, 1920, 1080))
+                    lb = hm.get("is_letterboxed", False)
+                    calib_frame = self.canvas_inspector.project_rois_to_frame(
+                        frame=frame,
+                        canvas_bounds=cb,
+                        is_letterboxed=lb,
+                    )
+                    rgb = cv2.cvtColor(calib_frame, cv2.COLOR_BGR2RGB)
                     im = Image.fromarray(rgb).resize((640, 360))
                     self._vision_img_tk = ImageTk.PhotoImage(im)
                     self.vision_canvas.delete("all")

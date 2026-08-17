@@ -23,6 +23,7 @@ hiddenimports = [
     'numpy',
 ]
 hiddenimports += collect_submodules('src')
+hiddenimports += collect_submodules('scripts')
 
 a = Analysis(
     ['main.py'],

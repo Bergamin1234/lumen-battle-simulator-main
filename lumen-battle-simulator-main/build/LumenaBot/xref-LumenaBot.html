@@ -22,6 +22,7 @@ imports:
  &#8226;   <a href="#_collections_abc">_collections_abc</a>
  &#8226;   <a href="#_weakrefset">_weakrefset</a>
  &#8226;   <a href="#abc">abc</a>
+ &#8226;   <a href="#argparse">argparse</a>
  &#8226;   <a href="#codecs">codecs</a>
  &#8226;   <a href="#collections">collections</a>
  &#8226;   <a href="#collections.abc">collections.abc</a>
@@ -158,6 +159,7 @@ imports:
  &#8226;   <a href="#keyword">keyword</a>
  &#8226;   <a href="#linecache">linecache</a>
  &#8226;   <a href="#locale">locale</a>
+ &#8226;   <a href="#logging">logging</a>
  &#8226;   <a href="#ntpath">ntpath</a>
  &#8226;   <a href="#numpy">numpy</a>
  &#8226;   <a href="#operator">operator</a>
@@ -175,6 +177,20 @@ imports:
  &#8226;   <a href="#re._constants">re._constants</a>
  &#8226;   <a href="#re._parser">re._parser</a>
  &#8226;   <a href="#reprlib">reprlib</a>
+ &#8226;   <a href="#scripts">scripts</a>
+ &#8226;   <a href="#scripts.debug_battle_ui">scripts.debug_battle_ui</a>
+ &#8226;   <a href="#scripts.debug_crystal_context">scripts.debug_crystal_context</a>
+ &#8226;   <a href="#scripts.debug_skill_scanner">scripts.debug_skill_scanner</a>
+ &#8226;   <a href="#scripts.diagnostics.run_field_trial">scripts.diagnostics.run_field_trial</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v361">scripts.real_battle_execution_v361</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v37">scripts.real_battle_execution_v37</a>
+ &#8226;   <a href="#scripts.real_input_diagnostic">scripts.real_input_diagnostic</a>
+ &#8226;   <a href="#scripts.real_world_test">scripts.real_world_test</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
+ &#8226;   <a href="#scripts.test_physical_input">scripts.test_physical_input</a>
+ &#8226;   <a href="#scripts.validate_live_input">scripts.validate_live_input</a>
+ &#8226;   <a href="#scripts.validate_real_integration">scripts.validate_real_integration</a>
  &#8226;   <a href="#sqlite3">sqlite3</a>
  &#8226;   <a href="#src">src</a>
  &#8226;   <a href="#src.ai">src.ai</a>
@@ -194,8 +210,10 @@ imports:
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
  &#8226;   <a href="#src.automation.healing">src.automation.healing</a>
  &#8226;   <a href="#src.automation.input_controller">src.automation.input_controller</a>
+ &#8226;   <a href="#src.automation.live_supervisor">src.automation.live_supervisor</a>
  &#8226;   <a href="#src.automation.movement">src.automation.movement</a>
  &#8226;   <a href="#src.automation.navigation">src.automation.navigation</a>
+ &#8226;   <a href="#src.automation.self_healing_engine">src.automation.self_healing_engine</a>
  &#8226;   <a href="#src.automation.state_machine">src.automation.state_machine</a>
  &#8226;   <a href="#src.automation.vision">src.automation.vision</a>
  &#8226;   <a href="#src.combat">src.combat</a>
@@ -243,6 +261,7 @@ imports:
  &#8226;   <a href="#src.perception.battle_ui_detector">src.perception.battle_ui_detector</a>
  &#8226;   <a href="#src.perception.combat_vision">src.perception.combat_vision</a>
  &#8226;   <a href="#src.perception.debug_skill_scanner">src.perception.debug_skill_scanner</a>
+ &#8226;   <a href="#src.perception.hp_bar_parser">src.perception.hp_bar_parser</a>
  &#8226;   <a href="#src.perception.landmark_detector">src.perception.landmark_detector</a>
  &#8226;   <a href="#src.perception.ocr">src.perception.ocr</a>
  &#8226;   <a href="#src.perception.screen_capture">src.perception.screen_capture</a>
@@ -254,10 +273,13 @@ imports:
  &#8226;   <a href="#src.services.inventory">src.services.inventory</a>
  &#8226;   <a href="#src.services.simulation">src.services.simulation</a>
  &#8226;   <a href="#src.telemetry">src.telemetry</a>
+ &#8226;   <a href="#src.telemetry.blackbox_recorder">src.telemetry.blackbox_recorder</a>
  &#8226;   <a href="#src.telemetry.evidence_package">src.telemetry.evidence_package</a>
+ &#8226;   <a href="#src.telemetry.replay_viewer">src.telemetry.replay_viewer</a>
  &#8226;   <a href="#src.telemetry.telemetry_manager">src.telemetry.telemetry_manager</a>
  &#8226;   <a href="#src.ui">src.ui</a>
  &#8226;   <a href="#src.ui.app_gui">src.ui.app_gui</a>
+ &#8226;   <a href="#src.ui.canvas_inspector_overlay">src.ui.canvas_inspector_overlay</a>
  &#8226;   <a href="#src.ui.cli">src.ui.cli</a>
  &#8226;   <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
  &#8226;   <a href="#sre_compile">sre_compile</a>
@@ -265,6 +287,7 @@ imports:
  &#8226;   <a href="#sre_parse">sre_parse</a>
  &#8226;   <a href="#stat">stat</a>
  &#8226;   <a href="#sys">sys</a>
+ &#8226;   <a href="#time">time</a>
  &#8226;   <a href="#tkinter">tkinter</a>
  &#8226;   <a href="#traceback">traceback</a>
  &#8226;   <a href="#types">types</a>
@@ -584,6 +607,7 @@ imported by:
  &#8226;   <a href="#mouseinfo">mouseinfo</a>
  &#8226;   <a href="#pyscreeze">pyscreeze</a>
  &#8226;   <a href="#scripts.real_world_test">scripts.real_world_test</a>
+ &#8226;   <a href="#scripts.validate_live_input">scripts.validate_live_input</a>
  &#8226;   <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
 
   </div>
@@ -1275,6 +1299,7 @@ imported by:
  &#8226;   <a href="#PIL.features">PIL.features</a>
  &#8226;   <a href="#mouseinfo">mouseinfo</a>
  &#8226;   <a href="#pyscreeze">pyscreeze</a>
+ &#8226;   <a href="#scripts.validate_live_input">scripts.validate_live_input</a>
  &#8226;   <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
 
   </div>
@@ -4183,8 +4208,11 @@ imported by:
  &#8226;   <a href="#gzip">gzip</a>
  &#8226;   <a href="#http.server">http.server</a>
  &#8226;   <a href="#inspect">inspect</a>
+ &#8226;   <a href="#main.py">main.py</a>
  &#8226;   <a href="#numpy.f2py.f2py2e">numpy.f2py.f2py2e</a>
  &#8226;   <a href="#py_compile">py_compile</a>
+ &#8226;   <a href="#scripts.debug_skill_scanner">scripts.debug_skill_scanner</a>
+ &#8226;   <a href="#scripts.diagnostics.run_field_trial">scripts.diagnostics.run_field_trial</a>
  &#8226;   <a href="#scripts.real_world_test">scripts.real_world_test</a>
  &#8226;   <a href="#sqlite3.__main__">sqlite3.__main__</a>
  &#8226;   <a href="#tarfile">tarfile</a>
@@ -5649,7 +5677,11 @@ imported by:
  &#8226;   <a href="#selectors">selectors</a>
  &#8226;   <a href="#shlex">shlex</a>
  &#8226;   <a href="#shutil">shutil</a>
+ &#8226;   <a href="#src.automation.live_supervisor">src.automation.live_supervisor</a>
+ &#8226;   <a href="#src.automation.self_healing_engine">src.automation.self_healing_engine</a>
  &#8226;   <a href="#src.memory.world_memory">src.memory.world_memory</a>
+ &#8226;   <a href="#src.perception.hp_bar_parser">src.perception.hp_bar_parser</a>
+ &#8226;   <a href="#src.telemetry.blackbox_recorder">src.telemetry.blackbox_recorder</a>
  &#8226;   <a href="#src.telemetry.telemetry_manager">src.telemetry.telemetry_manager</a>
  &#8226;   <a href="#ssl">ssl</a>
  &#8226;   <a href="#statistics">statistics</a>
@@ -5884,7 +5916,10 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#src.automation.battle_macro">src.automation.battle_macro</a>
+    <a href="#scripts.diagnostics.live_combat_loop_test">scripts.diagnostics.live_combat_loop_test</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v361">scripts.real_battle_execution_v361</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v37">scripts.real_battle_execution_v37</a>
+ &#8226;   <a href="#src.automation.battle_macro">src.automation.battle_macro</a>
  &#8226;   <a href="#src.automation.bot_controller">src.automation.bot_controller</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
  &#8226;   <a href="#src.automation.healing">src.automation.healing</a>
@@ -6100,6 +6135,8 @@ imported by:
  &#8226;   <a href="#pyperclip">pyperclip</a>
  &#8226;   <a href="#pyscreeze">pyscreeze</a>
  &#8226;   <a href="#scripts.real_world_test">scripts.real_world_test</a>
+ &#8226;   <a href="#scripts.test_physical_input">scripts.test_physical_input</a>
+ &#8226;   <a href="#src.automation.self_healing_engine">src.automation.self_healing_engine</a>
  &#8226;   <a href="#src.input.input_backend">src.input.input_backend</a>
  &#8226;   <a href="#src.input.input_controller">src.input.input_controller</a>
  &#8226;   <a href="#src.input.killswitch">src.input.killswitch</a>
@@ -6314,9 +6351,18 @@ imported by:
  &#8226;   <a href="#cv2.version">cv2.version</a>
  &#8226;   <a href="#main.py">main.py</a>
  &#8226;   <a href="#pyscreeze">pyscreeze</a>
+ &#8226;   <a href="#scripts.debug_battle_ui">scripts.debug_battle_ui</a>
+ &#8226;   <a href="#scripts.debug_crystal_context">scripts.debug_crystal_context</a>
+ &#8226;   <a href="#scripts.diagnostics.live_combat_loop_test">scripts.diagnostics.live_combat_loop_test</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v361">scripts.real_battle_execution_v361</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v37">scripts.real_battle_execution_v37</a>
+ &#8226;   <a href="#scripts.real_input_diagnostic">scripts.real_input_diagnostic</a>
  &#8226;   <a href="#scripts.real_world_test">scripts.real_world_test</a>
+ &#8226;   <a href="#scripts.test_physical_input">scripts.test_physical_input</a>
+ &#8226;   <a href="#scripts.validate_live_input">scripts.validate_live_input</a>
  &#8226;   <a href="#src.automation.battle_macro">src.automation.battle_macro</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
+ &#8226;   <a href="#src.automation.self_healing_engine">src.automation.self_healing_engine</a>
  &#8226;   <a href="#src.automation.vision">src.automation.vision</a>
  &#8226;   <a href="#src.legacy.old_battle_macro">src.legacy.old_battle_macro</a>
  &#8226;   <a href="#src.legacy.old_vision">src.legacy.old_vision</a>
@@ -6324,12 +6370,16 @@ imported by:
  &#8226;   <a href="#src.perception.battle_ui_detector">src.perception.battle_ui_detector</a>
  &#8226;   <a href="#src.perception.combat_vision">src.perception.combat_vision</a>
  &#8226;   <a href="#src.perception.debug_skill_scanner">src.perception.debug_skill_scanner</a>
+ &#8226;   <a href="#src.perception.hp_bar_parser">src.perception.hp_bar_parser</a>
  &#8226;   <a href="#src.perception.landmark_detector">src.perception.landmark_detector</a>
  &#8226;   <a href="#src.perception.ocr">src.perception.ocr</a>
  &#8226;   <a href="#src.perception.screen_capture">src.perception.screen_capture</a>
  &#8226;   <a href="#src.perception.ui_detector">src.perception.ui_detector</a>
  &#8226;   <a href="#src.perception.world_detector">src.perception.world_detector</a>
+ &#8226;   <a href="#src.telemetry.blackbox_recorder">src.telemetry.blackbox_recorder</a>
  &#8226;   <a href="#src.telemetry.evidence_package">src.telemetry.evidence_package</a>
+ &#8226;   <a href="#src.telemetry.replay_viewer">src.telemetry.replay_viewer</a>
+ &#8226;   <a href="#src.ui.canvas_inspector_overlay">src.ui.canvas_inspector_overlay</a>
  &#8226;   <a href="#src.ui.cli">src.ui.cli</a>
  &#8226;   <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
 
@@ -10397,7 +10447,6 @@ imports:
  &#8226;   <a href="#importlib">importlib</a>
  &#8226;   <a href="#importlib._bootstrap">importlib._bootstrap</a>
  &#8226;   <a href="#importlib._bootstrap_external">importlib._bootstrap_external</a>
- &#8226;   <a href="#importlib.machinery">importlib.machinery</a>
  &#8226;   <a href="#sys">sys</a>
  &#8226;   <a href="#warnings">warnings</a>
 
@@ -10533,7 +10582,6 @@ imports:
   <div class="import">
 imported by:
     <a href="#ctypes.util">ctypes.util</a>
- &#8226;   <a href="#importlib">importlib</a>
  &#8226;   <a href="#importlib.abc">importlib.abc</a>
  &#8226;   <a href="#inspect">inspect</a>
  &#8226;   <a href="#pkgutil">pkgutil</a>
@@ -11173,14 +11221,28 @@ imported by:
  &#8226;   <a href="#json.scanner">json.scanner</a>
  &#8226;   <a href="#numpy.__config__">numpy.__config__</a>
  &#8226;   <a href="#numpy.testing._private.utils">numpy.testing._private.utils</a>
+ &#8226;   <a href="#scripts.debug_battle_ui">scripts.debug_battle_ui</a>
+ &#8226;   <a href="#scripts.debug_crystal_context">scripts.debug_crystal_context</a>
+ &#8226;   <a href="#scripts.diagnostics.live_combat_loop_test">scripts.diagnostics.live_combat_loop_test</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v361">scripts.real_battle_execution_v361</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v37">scripts.real_battle_execution_v37</a>
+ &#8226;   <a href="#scripts.real_input_diagnostic">scripts.real_input_diagnostic</a>
  &#8226;   <a href="#scripts.real_world_test">scripts.real_world_test</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
+ &#8226;   <a href="#scripts.test_physical_input">scripts.test_physical_input</a>
+ &#8226;   <a href="#scripts.validate_live_input">scripts.validate_live_input</a>
+ &#8226;   <a href="#scripts.validate_real_integration">scripts.validate_real_integration</a>
  &#8226;   <a href="#src.automation.bot_controller">src.automation.bot_controller</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
+ &#8226;   <a href="#src.automation.live_supervisor">src.automation.live_supervisor</a>
  &#8226;   <a href="#src.automation.navigation">src.automation.navigation</a>
  &#8226;   <a href="#src.input.killswitch">src.input.killswitch</a>
  &#8226;   <a href="#src.legacy.old_navigation">src.legacy.old_navigation</a>
  &#8226;   <a href="#src.perception.debug_skill_scanner">src.perception.debug_skill_scanner</a>
+ &#8226;   <a href="#src.telemetry.blackbox_recorder">src.telemetry.blackbox_recorder</a>
  &#8226;   <a href="#src.telemetry.evidence_package">src.telemetry.evidence_package</a>
+ &#8226;   <a href="#src.telemetry.replay_viewer">src.telemetry.replay_viewer</a>
  &#8226;   <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
 
   </div>
@@ -11350,14 +11412,28 @@ imported by:
  &#8226;   <a href="#concurrent.futures._base">concurrent.futures._base</a>
  &#8226;   <a href="#hashlib">hashlib</a>
  &#8226;   <a href="#http.cookiejar">http.cookiejar</a>
+ &#8226;   <a href="#main.py">main.py</a>
  &#8226;   <a href="#multiprocessing.util">multiprocessing.util</a>
+ &#8226;   <a href="#scripts.debug_skill_scanner">scripts.debug_skill_scanner</a>
+ &#8226;   <a href="#scripts.diagnostics.live_combat_loop_test">scripts.diagnostics.live_combat_loop_test</a>
+ &#8226;   <a href="#scripts.diagnostics.run_field_trial">scripts.diagnostics.run_field_trial</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v361">scripts.real_battle_execution_v361</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v37">scripts.real_battle_execution_v37</a>
+ &#8226;   <a href="#scripts.real_input_diagnostic">scripts.real_input_diagnostic</a>
  &#8226;   <a href="#scripts.real_world_test">scripts.real_world_test</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
+ &#8226;   <a href="#scripts.test_physical_input">scripts.test_physical_input</a>
+ &#8226;   <a href="#scripts.validate_live_input">scripts.validate_live_input</a>
+ &#8226;   <a href="#scripts.validate_real_integration">scripts.validate_real_integration</a>
  &#8226;   <a href="#src.automation.battle_macro">src.automation.battle_macro</a>
  &#8226;   <a href="#src.automation.bot_controller">src.automation.bot_controller</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
  &#8226;   <a href="#src.automation.healing">src.automation.healing</a>
+ &#8226;   <a href="#src.automation.live_supervisor">src.automation.live_supervisor</a>
  &#8226;   <a href="#src.automation.movement">src.automation.movement</a>
  &#8226;   <a href="#src.automation.navigation">src.automation.navigation</a>
+ &#8226;   <a href="#src.automation.self_healing_engine">src.automation.self_healing_engine</a>
  &#8226;   <a href="#src.automation.state_machine">src.automation.state_machine</a>
  &#8226;   <a href="#src.combat.action_executor">src.combat.action_executor</a>
  &#8226;   <a href="#src.combat.battle_ui_controller">src.combat.battle_ui_controller</a>
@@ -11386,6 +11462,7 @@ imported by:
  &#8226;   <a href="#src.perception.battle_ui_detector">src.perception.battle_ui_detector</a>
  &#8226;   <a href="#src.perception.combat_vision">src.perception.combat_vision</a>
  &#8226;   <a href="#src.perception.debug_skill_scanner">src.perception.debug_skill_scanner</a>
+ &#8226;   <a href="#src.perception.hp_bar_parser">src.perception.hp_bar_parser</a>
  &#8226;   <a href="#src.perception.landmark_detector">src.perception.landmark_detector</a>
  &#8226;   <a href="#src.perception.ocr">src.perception.ocr</a>
  &#8226;   <a href="#src.perception.screen_capture">src.perception.screen_capture</a>
@@ -11393,7 +11470,9 @@ imported by:
  &#8226;   <a href="#src.perception.ui_detector">src.perception.ui_detector</a>
  &#8226;   <a href="#src.perception.world_detector">src.perception.world_detector</a>
  &#8226;   <a href="#src.services.evolution">src.services.evolution</a>
+ &#8226;   <a href="#src.telemetry.blackbox_recorder">src.telemetry.blackbox_recorder</a>
  &#8226;   <a href="#src.telemetry.evidence_package">src.telemetry.evidence_package</a>
+ &#8226;   <a href="#src.telemetry.replay_viewer">src.telemetry.replay_viewer</a>
  &#8226;   <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
  &#8226;   <a href="#unittest._log">unittest._log</a>
 
@@ -13254,11 +13333,23 @@ imported by:
  &#8226;   <a href="#numpy.typing">numpy.typing</a>
  &#8226;   <a href="#numpy.version">numpy.version</a>
  &#8226;   <a href="#pyscreeze">pyscreeze</a>
+ &#8226;   <a href="#scripts.debug_battle_ui">scripts.debug_battle_ui</a>
+ &#8226;   <a href="#scripts.debug_crystal_context">scripts.debug_crystal_context</a>
+ &#8226;   <a href="#scripts.diagnostics.live_combat_loop_test">scripts.diagnostics.live_combat_loop_test</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v361">scripts.real_battle_execution_v361</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v37">scripts.real_battle_execution_v37</a>
+ &#8226;   <a href="#scripts.real_input_diagnostic">scripts.real_input_diagnostic</a>
  &#8226;   <a href="#scripts.real_world_test">scripts.real_world_test</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
+ &#8226;   <a href="#scripts.test_physical_input">scripts.test_physical_input</a>
+ &#8226;   <a href="#scripts.validate_real_integration">scripts.validate_real_integration</a>
  &#8226;   <a href="#src.ai.q_learning">src.ai.q_learning</a>
  &#8226;   <a href="#src.automation.battle_macro">src.automation.battle_macro</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
  &#8226;   <a href="#src.automation.healing">src.automation.healing</a>
+ &#8226;   <a href="#src.automation.live_supervisor">src.automation.live_supervisor</a>
+ &#8226;   <a href="#src.automation.self_healing_engine">src.automation.self_healing_engine</a>
  &#8226;   <a href="#src.automation.vision">src.automation.vision</a>
  &#8226;   <a href="#src.combat.battle_ui_controller">src.combat.battle_ui_controller</a>
  &#8226;   <a href="#src.combat.combat_agent">src.combat.combat_agent</a>
@@ -13270,13 +13361,17 @@ imported by:
  &#8226;   <a href="#src.perception.battle_ui_detector">src.perception.battle_ui_detector</a>
  &#8226;   <a href="#src.perception.combat_vision">src.perception.combat_vision</a>
  &#8226;   <a href="#src.perception.debug_skill_scanner">src.perception.debug_skill_scanner</a>
+ &#8226;   <a href="#src.perception.hp_bar_parser">src.perception.hp_bar_parser</a>
  &#8226;   <a href="#src.perception.landmark_detector">src.perception.landmark_detector</a>
  &#8226;   <a href="#src.perception.ocr">src.perception.ocr</a>
  &#8226;   <a href="#src.perception.screen_capture">src.perception.screen_capture</a>
  &#8226;   <a href="#src.perception.state_classifier">src.perception.state_classifier</a>
  &#8226;   <a href="#src.perception.ui_detector">src.perception.ui_detector</a>
  &#8226;   <a href="#src.perception.world_detector">src.perception.world_detector</a>
+ &#8226;   <a href="#src.telemetry.blackbox_recorder">src.telemetry.blackbox_recorder</a>
  &#8226;   <a href="#src.telemetry.evidence_package">src.telemetry.evidence_package</a>
+ &#8226;   <a href="#src.telemetry.replay_viewer">src.telemetry.replay_viewer</a>
+ &#8226;   <a href="#src.ui.canvas_inspector_overlay">src.ui.canvas_inspector_overlay</a>
  &#8226;   <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
 
   </div>
@@ -19703,13 +19798,27 @@ imported by:
  &#8226;   <a href="#pyscreeze">pyscreeze</a>
  &#8226;   <a href="#random">random</a>
  &#8226;   <a href="#runpy">runpy</a>
+ &#8226;   <a href="#scripts.debug_battle_ui">scripts.debug_battle_ui</a>
+ &#8226;   <a href="#scripts.debug_crystal_context">scripts.debug_crystal_context</a>
+ &#8226;   <a href="#scripts.debug_skill_scanner">scripts.debug_skill_scanner</a>
+ &#8226;   <a href="#scripts.diagnostics.live_combat_loop_test">scripts.diagnostics.live_combat_loop_test</a>
+ &#8226;   <a href="#scripts.diagnostics.run_field_trial">scripts.diagnostics.run_field_trial</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v361">scripts.real_battle_execution_v361</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v37">scripts.real_battle_execution_v37</a>
+ &#8226;   <a href="#scripts.real_input_diagnostic">scripts.real_input_diagnostic</a>
  &#8226;   <a href="#scripts.real_world_test">scripts.real_world_test</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
+ &#8226;   <a href="#scripts.test_physical_input">scripts.test_physical_input</a>
+ &#8226;   <a href="#scripts.validate_live_input">scripts.validate_live_input</a>
+ &#8226;   <a href="#scripts.validate_real_integration">scripts.validate_real_integration</a>
  &#8226;   <a href="#shlex">shlex</a>
  &#8226;   <a href="#shutil">shutil</a>
  &#8226;   <a href="#socket">socket</a>
  &#8226;   <a href="#socketserver">socketserver</a>
  &#8226;   <a href="#src.automation.bot_controller">src.automation.bot_controller</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
+ &#8226;   <a href="#src.automation.live_supervisor">src.automation.live_supervisor</a>
  &#8226;   <a href="#src.automation.navigation">src.automation.navigation</a>
  &#8226;   <a href="#src.automation.vision">src.automation.vision</a>
  &#8226;   <a href="#src.input.killswitch">src.input.killswitch</a>
@@ -19720,7 +19829,9 @@ imported by:
  &#8226;   <a href="#src.memory.experience_store">src.memory.experience_store</a>
  &#8226;   <a href="#src.perception.battle_ui_detector">src.perception.battle_ui_detector</a>
  &#8226;   <a href="#src.perception.debug_skill_scanner">src.perception.debug_skill_scanner</a>
+ &#8226;   <a href="#src.telemetry.blackbox_recorder">src.telemetry.blackbox_recorder</a>
  &#8226;   <a href="#src.telemetry.evidence_package">src.telemetry.evidence_package</a>
+ &#8226;   <a href="#src.telemetry.replay_viewer">src.telemetry.replay_viewer</a>
  &#8226;   <a href="#src.ui.cli">src.ui.cli</a>
  &#8226;   <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
  &#8226;   <a href="#ssl">ssl</a>
@@ -20118,6 +20229,7 @@ imported by:
  &#8226;   <a href="#pyautogui._pyautogui_win">pyautogui._pyautogui_win</a>
  &#8226;   <a href="#pyautogui._pyautogui_x11">pyautogui._pyautogui_x11</a>
  &#8226;   <a href="#scripts.real_world_test">scripts.real_world_test</a>
+ &#8226;   <a href="#scripts.validate_live_input">scripts.validate_live_input</a>
  &#8226;   <a href="#src.input.input_backend">src.input.input_backend</a>
  &#8226;   <a href="#src.input.input_controller">src.input.input_controller</a>
 
@@ -20294,6 +20406,7 @@ imported by:
  &#8226;   <a href="#pygetwindow._pygetwindow_macos">pygetwindow._pygetwindow_macos</a>
  &#8226;   <a href="#pygetwindow._pygetwindow_win">pygetwindow._pygetwindow_win</a>
  &#8226;   <a href="#pyscreeze">pyscreeze</a>
+ &#8226;   <a href="#scripts.validate_real_integration">scripts.validate_real_integration</a>
  &#8226;   <a href="#src.input.target_window">src.input.target_window</a>
 
   </div>
@@ -20898,7 +21011,259 @@ imported by:
   <a target="code" href="-" type="text/plain"><tt>scripts</tt></a>
 <span class="moduletype">NamespacePackage</span>  <div class="import">
 imported by:
-    <a href="#scripts.real_world_test">scripts.real_world_test</a>
+    <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.debug_battle_ui">scripts.debug_battle_ui</a>
+ &#8226;   <a href="#scripts.debug_crystal_context">scripts.debug_crystal_context</a>
+ &#8226;   <a href="#scripts.debug_skill_scanner">scripts.debug_skill_scanner</a>
+ &#8226;   <a href="#scripts.diagnostics">scripts.diagnostics</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v361">scripts.real_battle_execution_v361</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v37">scripts.real_battle_execution_v37</a>
+ &#8226;   <a href="#scripts.real_input_diagnostic">scripts.real_input_diagnostic</a>
+ &#8226;   <a href="#scripts.real_world_test">scripts.real_world_test</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
+ &#8226;   <a href="#scripts.test_physical_input">scripts.test_physical_input</a>
+ &#8226;   <a href="#scripts.validate_live_input">scripts.validate_live_input</a>
+ &#8226;   <a href="#scripts.validate_real_integration">scripts.validate_real_integration</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="scripts.debug_battle_ui"></a>
+  <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/scripts/debug_battle_ui.py" type="text/plain"><tt>scripts.debug_battle_ui</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#cv2">cv2</a>
+ &#8226;   <a href="#json">json</a>
+ &#8226;   <a href="#numpy">numpy</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#scripts">scripts</a>
+ &#8226;   <a href="#src.perception.battle_ui_detector">src.perception.battle_ui_detector</a>
+ &#8226;   <a href="#src.perception.screen_capture">src.perception.screen_capture</a>
+ &#8226;   <a href="#sys">sys</a>
+ &#8226;   <a href="#time">time</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="scripts.debug_crystal_context"></a>
+  <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/scripts/debug_crystal_context.py" type="text/plain"><tt>scripts.debug_crystal_context</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#cv2">cv2</a>
+ &#8226;   <a href="#json">json</a>
+ &#8226;   <a href="#numpy">numpy</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#scripts">scripts</a>
+ &#8226;   <a href="#src.perception.battle_ui_detector">src.perception.battle_ui_detector</a>
+ &#8226;   <a href="#src.perception.landmark_detector">src.perception.landmark_detector</a>
+ &#8226;   <a href="#sys">sys</a>
+ &#8226;   <a href="#time">time</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="scripts.debug_skill_scanner"></a>
+  <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/scripts/debug_skill_scanner.py" type="text/plain"><tt>scripts.debug_skill_scanner</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#argparse">argparse</a>
+ &#8226;   <a href="#logging">logging</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#scripts">scripts</a>
+ &#8226;   <a href="#src.perception.debug_skill_scanner">src.perception.debug_skill_scanner</a>
+ &#8226;   <a href="#sys">sys</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="scripts.diagnostics"></a>
+  <a target="code" href="-" type="text/plain"><tt>scripts.diagnostics</tt></a>
+<span class="moduletype">NamespacePackage</span>  <div class="import">
+imports:
+    <a href="#scripts">scripts</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#scripts.diagnostics.live_combat_loop_test">scripts.diagnostics.live_combat_loop_test</a>
+ &#8226;   <a href="#scripts.diagnostics.run_field_trial">scripts.diagnostics.run_field_trial</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="scripts.diagnostics.live_combat_loop_test"></a>
+  <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/scripts/diagnostics/live_combat_loop_test.py" type="text/plain"><tt>scripts.diagnostics.live_combat_loop_test</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#config.settings">config.settings</a>
+ &#8226;   <a href="#cv2">cv2</a>
+ &#8226;   <a href="#json">json</a>
+ &#8226;   <a href="#logging">logging</a>
+ &#8226;   <a href="#numpy">numpy</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#scripts.diagnostics">scripts.diagnostics</a>
+ &#8226;   <a href="#src.combat.battle_ui_controller">src.combat.battle_ui_controller</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
+ &#8226;   <a href="#src.input.input_controller">src.input.input_controller</a>
+ &#8226;   <a href="#src.input.input_dispatcher">src.input.input_dispatcher</a>
+ &#8226;   <a href="#src.input.killswitch">src.input.killswitch</a>
+ &#8226;   <a href="#src.perception.battle_ui_detector">src.perception.battle_ui_detector</a>
+ &#8226;   <a href="#src.perception.screen_capture">src.perception.screen_capture</a>
+ &#8226;   <a href="#sys">sys</a>
+ &#8226;   <a href="#time">time</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="scripts.diagnostics.run_field_trial"></a>
+  <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/scripts/diagnostics/run_field_trial.py" type="text/plain"><tt>scripts.diagnostics.run_field_trial</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#argparse">argparse</a>
+ &#8226;   <a href="#logging">logging</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#scripts.diagnostics">scripts.diagnostics</a>
+ &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
+ &#8226;   <a href="#src.automation.live_supervisor">src.automation.live_supervisor</a>
+ &#8226;   <a href="#src.automation.state_machine">src.automation.state_machine</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
+ &#8226;   <a href="#sys">sys</a>
+ &#8226;   <a href="#time">time</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+ &#8226;   <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="scripts.real_battle_execution_v361"></a>
+  <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/scripts/real_battle_execution_v361.py" type="text/plain"><tt>scripts.real_battle_execution_v361</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#config.settings">config.settings</a>
+ &#8226;   <a href="#cv2">cv2</a>
+ &#8226;   <a href="#json">json</a>
+ &#8226;   <a href="#logging">logging</a>
+ &#8226;   <a href="#numpy">numpy</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#scripts">scripts</a>
+ &#8226;   <a href="#src.combat.combat_agent">src.combat.combat_agent</a>
+ &#8226;   <a href="#src.combat.decision_engine">src.combat.decision_engine</a>
+ &#8226;   <a href="#src.combat.skill_executor">src.combat.skill_executor</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
+ &#8226;   <a href="#src.input.input_controller">src.input.input_controller</a>
+ &#8226;   <a href="#src.input.target_window">src.input.target_window</a>
+ &#8226;   <a href="#src.perception.combat_vision">src.perception.combat_vision</a>
+ &#8226;   <a href="#src.perception.screen_capture">src.perception.screen_capture</a>
+ &#8226;   <a href="#src.perception.state_classifier">src.perception.state_classifier</a>
+ &#8226;   <a href="#sys">sys</a>
+ &#8226;   <a href="#time">time</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="scripts.real_battle_execution_v37"></a>
+  <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/scripts/real_battle_execution_v37.py" type="text/plain"><tt>scripts.real_battle_execution_v37</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#config.settings">config.settings</a>
+ &#8226;   <a href="#cv2">cv2</a>
+ &#8226;   <a href="#json">json</a>
+ &#8226;   <a href="#logging">logging</a>
+ &#8226;   <a href="#numpy">numpy</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#scripts">scripts</a>
+ &#8226;   <a href="#src.combat.battle_ui_controller">src.combat.battle_ui_controller</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
+ &#8226;   <a href="#src.input.input_controller">src.input.input_controller</a>
+ &#8226;   <a href="#src.input.target_window">src.input.target_window</a>
+ &#8226;   <a href="#src.perception.battle_ui_detector">src.perception.battle_ui_detector</a>
+ &#8226;   <a href="#src.perception.screen_capture">src.perception.screen_capture</a>
+ &#8226;   <a href="#sys">sys</a>
+ &#8226;   <a href="#time">time</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="scripts.real_input_diagnostic"></a>
+  <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/scripts/real_input_diagnostic.py" type="text/plain"><tt>scripts.real_input_diagnostic</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#cv2">cv2</a>
+ &#8226;   <a href="#json">json</a>
+ &#8226;   <a href="#logging">logging</a>
+ &#8226;   <a href="#numpy">numpy</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#scripts">scripts</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
+ &#8226;   <a href="#src.input.input_controller">src.input.input_controller</a>
+ &#8226;   <a href="#src.input.target_window">src.input.target_window</a>
+ &#8226;   <a href="#src.perception.screen_capture">src.perception.screen_capture</a>
+ &#8226;   <a href="#src.telemetry.evidence_package">src.telemetry.evidence_package</a>
+ &#8226;   <a href="#sys">sys</a>
+ &#8226;   <a href="#time">time</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
 
   </div>
 
@@ -20931,7 +21296,169 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
+    <a href="#main.py">main.py</a>
+ &#8226;   <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="scripts.real_world_validation_v34"></a>
+  <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/scripts/real_world_validation_v34.py" type="text/plain"><tt>scripts.real_world_validation_v34</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#json">json</a>
+ &#8226;   <a href="#logging">logging</a>
+ &#8226;   <a href="#numpy">numpy</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#scripts">scripts</a>
+ &#8226;   <a href="#src.automation.healing">src.automation.healing</a>
+ &#8226;   <a href="#src.combat.decision_engine">src.combat.decision_engine</a>
+ &#8226;   <a href="#src.combat.positioning">src.combat.positioning</a>
+ &#8226;   <a href="#src.combat.skill_executor">src.combat.skill_executor</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
+ &#8226;   <a href="#src.input.input_controller">src.input.input_controller</a>
+ &#8226;   <a href="#src.input.target_window">src.input.target_window</a>
+ &#8226;   <a href="#src.models.combat_vision">src.models.combat_vision</a>
+ &#8226;   <a href="#src.models.lumen">src.models.lumen</a>
+ &#8226;   <a href="#src.perception.combat_vision">src.perception.combat_vision</a>
+ &#8226;   <a href="#src.perception.landmark_detector">src.perception.landmark_detector</a>
+ &#8226;   <a href="#src.perception.screen_capture">src.perception.screen_capture</a>
+ &#8226;   <a href="#src.telemetry.telemetry_manager">src.telemetry.telemetry_manager</a>
+ &#8226;   <a href="#sys">sys</a>
+ &#8226;   <a href="#time">time</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="scripts.real_world_validation_v35"></a>
+  <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/scripts/real_world_validation_v35.py" type="text/plain"><tt>scripts.real_world_validation_v35</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#json">json</a>
+ &#8226;   <a href="#logging">logging</a>
+ &#8226;   <a href="#numpy">numpy</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#scripts">scripts</a>
+ &#8226;   <a href="#src.automation.healing">src.automation.healing</a>
+ &#8226;   <a href="#src.combat.decision_engine">src.combat.decision_engine</a>
+ &#8226;   <a href="#src.combat.positioning">src.combat.positioning</a>
+ &#8226;   <a href="#src.combat.skill_executor">src.combat.skill_executor</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
+ &#8226;   <a href="#src.input.input_controller">src.input.input_controller</a>
+ &#8226;   <a href="#src.input.target_window">src.input.target_window</a>
+ &#8226;   <a href="#src.models.combat_vision">src.models.combat_vision</a>
+ &#8226;   <a href="#src.models.enums">src.models.enums</a>
+ &#8226;   <a href="#src.models.lumen">src.models.lumen</a>
+ &#8226;   <a href="#src.perception.combat_vision">src.perception.combat_vision</a>
+ &#8226;   <a href="#src.perception.landmark_detector">src.perception.landmark_detector</a>
+ &#8226;   <a href="#src.perception.screen_capture">src.perception.screen_capture</a>
+ &#8226;   <a href="#src.telemetry.telemetry_manager">src.telemetry.telemetry_manager</a>
+ &#8226;   <a href="#sys">sys</a>
+ &#8226;   <a href="#time">time</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="scripts.test_physical_input"></a>
+  <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/scripts/test_physical_input.py" type="text/plain"><tt>scripts.test_physical_input</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#ctypes">ctypes</a>
+ &#8226;   <a href="#cv2">cv2</a>
+ &#8226;   <a href="#json">json</a>
+ &#8226;   <a href="#logging">logging</a>
+ &#8226;   <a href="#numpy">numpy</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#scripts">scripts</a>
+ &#8226;   <a href="#src.input.input_controller">src.input.input_controller</a>
+ &#8226;   <a href="#src.input.target_window">src.input.target_window</a>
+ &#8226;   <a href="#src.perception.screen_capture">src.perception.screen_capture</a>
+ &#8226;   <a href="#sys">sys</a>
+ &#8226;   <a href="#time">time</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="scripts.validate_live_input"></a>
+  <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/scripts/validate_live_input.py" type="text/plain"><tt>scripts.validate_live_input</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#PIL">PIL</a>
+ &#8226;   <a href="#PIL.Image">PIL.Image</a>
+ &#8226;   <a href="#cv2">cv2</a>
+ &#8226;   <a href="#json">json</a>
+ &#8226;   <a href="#logging">logging</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#pyautogui">pyautogui</a>
+ &#8226;   <a href="#scripts">scripts</a>
+ &#8226;   <a href="#src.input.input_controller">src.input.input_controller</a>
+ &#8226;   <a href="#src.input.target_window">src.input.target_window</a>
+ &#8226;   <a href="#src.perception.screen_capture">src.perception.screen_capture</a>
+ &#8226;   <a href="#sys">sys</a>
+ &#8226;   <a href="#time">time</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="scripts.validate_real_integration"></a>
+  <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/scripts/validate_real_integration.py" type="text/plain"><tt>scripts.validate_real_integration</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#json">json</a>
+ &#8226;   <a href="#logging">logging</a>
+ &#8226;   <a href="#numpy">numpy</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#pygetwindow">pygetwindow</a>
+ &#8226;   <a href="#scripts">scripts</a>
+ &#8226;   <a href="#src.combat.action_executor">src.combat.action_executor</a>
+ &#8226;   <a href="#src.combat.combat_agent">src.combat.combat_agent</a>
+ &#8226;   <a href="#src.input.input_controller">src.input.input_controller</a>
+ &#8226;   <a href="#src.memory.experience_store">src.memory.experience_store</a>
+ &#8226;   <a href="#src.memory.memory_manager">src.memory.memory_manager</a>
+ &#8226;   <a href="#src.memory.world_memory">src.memory.world_memory</a>
+ &#8226;   <a href="#src.models.enums">src.models.enums</a>
+ &#8226;   <a href="#src.models.lumen">src.models.lumen</a>
+ &#8226;   <a href="#src.perception.screen_capture">src.perception.screen_capture</a>
+ &#8226;   <a href="#src.perception.state_classifier">src.perception.state_classifier</a>
+ &#8226;   <a href="#sys">sys</a>
+ &#8226;   <a href="#time">time</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
 
   </div>
 
@@ -21496,8 +22023,10 @@ imported by:
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
  &#8226;   <a href="#src.automation.healing">src.automation.healing</a>
  &#8226;   <a href="#src.automation.input_controller">src.automation.input_controller</a>
+ &#8226;   <a href="#src.automation.live_supervisor">src.automation.live_supervisor</a>
  &#8226;   <a href="#src.automation.movement">src.automation.movement</a>
  &#8226;   <a href="#src.automation.navigation">src.automation.navigation</a>
+ &#8226;   <a href="#src.automation.self_healing_engine">src.automation.self_healing_engine</a>
  &#8226;   <a href="#src.automation.state_machine">src.automation.state_machine</a>
  &#8226;   <a href="#src.automation.vision">src.automation.vision</a>
 
@@ -21571,6 +22100,7 @@ imports:
  &#8226;   <a href="#src.automation">src.automation</a>
  &#8226;   <a href="#src.automation.healing">src.automation.healing</a>
  &#8226;   <a href="#src.automation.navigation">src.automation.navigation</a>
+ &#8226;   <a href="#src.automation.self_healing_engine">src.automation.self_healing_engine</a>
  &#8226;   <a href="#src.automation.state_machine">src.automation.state_machine</a>
  &#8226;   <a href="#src.combat.action_executor">src.combat.action_executor</a>
  &#8226;   <a href="#src.combat.battle_ui_controller">src.combat.battle_ui_controller</a>
@@ -21586,6 +22116,7 @@ imports:
  &#8226;   <a href="#src.perception.combat_vision">src.perception.combat_vision</a>
  &#8226;   <a href="#src.perception.screen_capture">src.perception.screen_capture</a>
  &#8226;   <a href="#src.perception.state_classifier">src.perception.state_classifier</a>
+ &#8226;   <a href="#src.telemetry.blackbox_recorder">src.telemetry.blackbox_recorder</a>
  &#8226;   <a href="#src.telemetry.telemetry_manager">src.telemetry.telemetry_manager</a>
  &#8226;   <a href="#threading">threading</a>
  &#8226;   <a href="#time">time</a>
@@ -21595,6 +22126,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.diagnostics.run_field_trial">scripts.diagnostics.run_field_trial</a>
  &#8226;   <a href="#src.automation">src.automation</a>
  &#8226;   <a href="#src.automation.bot_controller">src.automation.bot_controller</a>
  &#8226;   <a href="#src.ui.cli">src.ui.cli</a>
@@ -21624,6 +22156,8 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
 
   </div>
@@ -21644,6 +22178,33 @@ imported by:
     <a href="#main.py">main.py</a>
  &#8226;   <a href="#src.automation.battle_macro">src.automation.battle_macro</a>
  &#8226;   <a href="#src.automation.movement">src.automation.movement</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="src.automation.live_supervisor"></a>
+  <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/src/automation/live_supervisor.py" type="text/plain"><tt>src.automation.live_supervisor</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#collections">collections</a>
+ &#8226;   <a href="#json">json</a>
+ &#8226;   <a href="#logging">logging</a>
+ &#8226;   <a href="#numpy">numpy</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#src.automation">src.automation</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
+ &#8226;   <a href="#src.input.target_window">src.input.target_window</a>
+ &#8226;   <a href="#src.telemetry.blackbox_recorder">src.telemetry.blackbox_recorder</a>
+ &#8226;   <a href="#time">time</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.diagnostics.run_field_trial">scripts.diagnostics.run_field_trial</a>
 
   </div>
 
@@ -21697,6 +22258,32 @@ imported by:
 </div>
 
 <div class="node">
+  <a name="src.automation.self_healing_engine"></a>
+  <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/src/automation/self_healing_engine.py" type="text/plain"><tt>src.automation.self_healing_engine</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#collections">collections</a>
+ &#8226;   <a href="#ctypes">ctypes</a>
+ &#8226;   <a href="#cv2">cv2</a>
+ &#8226;   <a href="#logging">logging</a>
+ &#8226;   <a href="#numpy">numpy</a>
+ &#8226;   <a href="#src.automation">src.automation</a>
+ &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
+ &#8226;   <a href="#src.input.target_window">src.input.target_window</a>
+ &#8226;   <a href="#time">time</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+ &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
+
+  </div>
+
+</div>
+
+<div class="node">
   <a name="src.automation.state_machine"></a>
   <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/src/automation/state_machine.py" type="text/plain"><tt>src.automation.state_machine</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
@@ -21711,6 +22298,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.diagnostics.run_field_trial">scripts.diagnostics.run_field_trial</a>
  &#8226;   <a href="#src.automation">src.automation</a>
  &#8226;   <a href="#src.automation.bot_controller">src.automation.bot_controller</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
@@ -21788,6 +22376,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.validate_real_integration">scripts.validate_real_integration</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
  &#8226;   <a href="#src.combat">src.combat</a>
  &#8226;   <a href="#src.combat.combat_agent">src.combat.combat_agent</a>
@@ -21817,6 +22406,8 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.diagnostics.live_combat_loop_test">scripts.diagnostics.live_combat_loop_test</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v37">scripts.real_battle_execution_v37</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
 
   </div>
@@ -21848,6 +22439,8 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v361">scripts.real_battle_execution_v361</a>
+ &#8226;   <a href="#scripts.validate_real_integration">scripts.validate_real_integration</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
  &#8226;   <a href="#src.combat">src.combat</a>
 
@@ -21875,6 +22468,9 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v361">scripts.real_battle_execution_v361</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
  &#8226;   <a href="#src.combat">src.combat</a>
  &#8226;   <a href="#src.combat.combat_agent">src.combat.combat_agent</a>
 
@@ -21898,6 +22494,8 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
  &#8226;   <a href="#src.combat.decision_engine">src.combat.decision_engine</a>
 
   </div>
@@ -21922,6 +22520,9 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v361">scripts.real_battle_execution_v361</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
  &#8226;   <a href="#src.combat.combat_agent">src.combat.combat_agent</a>
 
@@ -22056,10 +22657,19 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.diagnostics.live_combat_loop_test">scripts.diagnostics.live_combat_loop_test</a>
+ &#8226;   <a href="#scripts.diagnostics.run_field_trial">scripts.diagnostics.run_field_trial</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v361">scripts.real_battle_execution_v361</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v37">scripts.real_battle_execution_v37</a>
+ &#8226;   <a href="#scripts.real_input_diagnostic">scripts.real_input_diagnostic</a>
  &#8226;   <a href="#scripts.real_world_test">scripts.real_world_test</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
  &#8226;   <a href="#src.automation.bot_controller">src.automation.bot_controller</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
  &#8226;   <a href="#src.automation.healing">src.automation.healing</a>
+ &#8226;   <a href="#src.automation.live_supervisor">src.automation.live_supervisor</a>
+ &#8226;   <a href="#src.automation.self_healing_engine">src.automation.self_healing_engine</a>
  &#8226;   <a href="#src.automation.state_machine">src.automation.state_machine</a>
  &#8226;   <a href="#src.combat.battle_ui_controller">src.combat.battle_ui_controller</a>
  &#8226;   <a href="#src.combat.combat_agent">src.combat.combat_agent</a>
@@ -22249,7 +22859,16 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.diagnostics.live_combat_loop_test">scripts.diagnostics.live_combat_loop_test</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v361">scripts.real_battle_execution_v361</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v37">scripts.real_battle_execution_v37</a>
+ &#8226;   <a href="#scripts.real_input_diagnostic">scripts.real_input_diagnostic</a>
  &#8226;   <a href="#scripts.real_world_test">scripts.real_world_test</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
+ &#8226;   <a href="#scripts.test_physical_input">scripts.test_physical_input</a>
+ &#8226;   <a href="#scripts.validate_live_input">scripts.validate_live_input</a>
+ &#8226;   <a href="#scripts.validate_real_integration">scripts.validate_real_integration</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
  &#8226;   <a href="#src.automation.healing">src.automation.healing</a>
  &#8226;   <a href="#src.automation.input_controller">src.automation.input_controller</a>
@@ -22285,6 +22904,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.diagnostics.live_combat_loop_test">scripts.diagnostics.live_combat_loop_test</a>
 
   </div>
 
@@ -22311,6 +22931,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.diagnostics.live_combat_loop_test">scripts.diagnostics.live_combat_loop_test</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
 
   </div>
@@ -22365,7 +22986,16 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v361">scripts.real_battle_execution_v361</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v37">scripts.real_battle_execution_v37</a>
+ &#8226;   <a href="#scripts.real_input_diagnostic">scripts.real_input_diagnostic</a>
  &#8226;   <a href="#scripts.real_world_test">scripts.real_world_test</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
+ &#8226;   <a href="#scripts.test_physical_input">scripts.test_physical_input</a>
+ &#8226;   <a href="#scripts.validate_live_input">scripts.validate_live_input</a>
+ &#8226;   <a href="#src.automation.live_supervisor">src.automation.live_supervisor</a>
+ &#8226;   <a href="#src.automation.self_healing_engine">src.automation.self_healing_engine</a>
  &#8226;   <a href="#src.input">src.input</a>
  &#8226;   <a href="#src.input.input_controller">src.input.input_controller</a>
  &#8226;   <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
@@ -22572,6 +23202,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.validate_real_integration">scripts.validate_real_integration</a>
  &#8226;   <a href="#src.memory">src.memory</a>
  &#8226;   <a href="#src.memory.memory_manager">src.memory.memory_manager</a>
 
@@ -22596,6 +23227,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.validate_real_integration">scripts.validate_real_integration</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
  &#8226;   <a href="#src.combat.action_executor">src.combat.action_executor</a>
  &#8226;   <a href="#src.combat.combat_agent">src.combat.combat_agent</a>
@@ -22623,6 +23255,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.validate_real_integration">scripts.validate_real_integration</a>
  &#8226;   <a href="#src.memory">src.memory</a>
  &#8226;   <a href="#src.memory.memory_manager">src.memory.memory_manager</a>
 
@@ -22667,6 +23300,8 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
  &#8226;   <a href="#src.combat.battle_ui_controller">src.combat.battle_ui_controller</a>
  &#8226;   <a href="#src.combat.combat_agent">src.combat.combat_agent</a>
@@ -22695,6 +23330,8 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
+ &#8226;   <a href="#scripts.validate_real_integration">scripts.validate_real_integration</a>
  &#8226;   <a href="#src.ai.strategy">src.ai.strategy</a>
  &#8226;   <a href="#src.combat.battle_ui_controller">src.combat.battle_ui_controller</a>
  &#8226;   <a href="#src.combat.decision_engine">src.combat.decision_engine</a>
@@ -22732,6 +23369,9 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
+ &#8226;   <a href="#scripts.validate_real_integration">scripts.validate_real_integration</a>
  &#8226;   <a href="#src.ai.strategy">src.ai.strategy</a>
  &#8226;   <a href="#src.automation.healing">src.automation.healing</a>
  &#8226;   <a href="#src.combat.action_executor">src.combat.action_executor</a>
@@ -22777,6 +23417,7 @@ imported by:
  &#8226;   <a href="#src.perception.battle_ui_detector">src.perception.battle_ui_detector</a>
  &#8226;   <a href="#src.perception.combat_vision">src.perception.combat_vision</a>
  &#8226;   <a href="#src.perception.debug_skill_scanner">src.perception.debug_skill_scanner</a>
+ &#8226;   <a href="#src.perception.hp_bar_parser">src.perception.hp_bar_parser</a>
  &#8226;   <a href="#src.perception.landmark_detector">src.perception.landmark_detector</a>
  &#8226;   <a href="#src.perception.ocr">src.perception.ocr</a>
  &#8226;   <a href="#src.perception.screen_capture">src.perception.screen_capture</a>
@@ -22824,6 +23465,7 @@ imports:
  &#8226;   <a href="#os">os</a>
  &#8226;   <a href="#src.core.event_bus">src.core.event_bus</a>
  &#8226;   <a href="#src.perception">src.perception</a>
+ &#8226;   <a href="#src.perception.hp_bar_parser">src.perception.hp_bar_parser</a>
  &#8226;   <a href="#time">time</a>
  &#8226;   <a href="#typing">typing</a>
 
@@ -22831,6 +23473,10 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.debug_battle_ui">scripts.debug_battle_ui</a>
+ &#8226;   <a href="#scripts.debug_crystal_context">scripts.debug_crystal_context</a>
+ &#8226;   <a href="#scripts.diagnostics.live_combat_loop_test">scripts.diagnostics.live_combat_loop_test</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v37">scripts.real_battle_execution_v37</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
  &#8226;   <a href="#src.combat.battle_ui_controller">src.combat.battle_ui_controller</a>
 
@@ -22856,6 +23502,9 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v361">scripts.real_battle_execution_v361</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
  &#8226;   <a href="#src.perception.debug_skill_scanner">src.perception.debug_skill_scanner</a>
  &#8226;   <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
@@ -22885,7 +23534,30 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.debug_skill_scanner">scripts.debug_skill_scanner</a>
  &#8226;   <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="src.perception.hp_bar_parser"></a>
+  <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/src/perception/hp_bar_parser.py" type="text/plain"><tt>src.perception.hp_bar_parser</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#collections">collections</a>
+ &#8226;   <a href="#cv2">cv2</a>
+ &#8226;   <a href="#logging">logging</a>
+ &#8226;   <a href="#numpy">numpy</a>
+ &#8226;   <a href="#src.perception">src.perception</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+ &#8226;   <a href="#src.perception.battle_ui_detector">src.perception.battle_ui_detector</a>
 
   </div>
 
@@ -22907,6 +23579,9 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.debug_crystal_context">scripts.debug_crystal_context</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
  &#8226;   <a href="#src.perception">src.perception</a>
  &#8226;   <a href="#src.perception.state_classifier">src.perception.state_classifier</a>
 
@@ -22956,7 +23631,17 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.debug_battle_ui">scripts.debug_battle_ui</a>
+ &#8226;   <a href="#scripts.diagnostics.live_combat_loop_test">scripts.diagnostics.live_combat_loop_test</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v361">scripts.real_battle_execution_v361</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v37">scripts.real_battle_execution_v37</a>
+ &#8226;   <a href="#scripts.real_input_diagnostic">scripts.real_input_diagnostic</a>
  &#8226;   <a href="#scripts.real_world_test">scripts.real_world_test</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
+ &#8226;   <a href="#scripts.test_physical_input">scripts.test_physical_input</a>
+ &#8226;   <a href="#scripts.validate_live_input">scripts.validate_live_input</a>
+ &#8226;   <a href="#scripts.validate_real_integration">scripts.validate_real_integration</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
  &#8226;   <a href="#src.perception">src.perception</a>
  &#8226;   <a href="#src.perception.debug_skill_scanner">src.perception.debug_skill_scanner</a>
@@ -22987,6 +23672,8 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v361">scripts.real_battle_execution_v361</a>
+ &#8226;   <a href="#scripts.validate_real_integration">scripts.validate_real_integration</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
  &#8226;   <a href="#src.perception">src.perception</a>
 
@@ -23129,8 +23816,36 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#src.telemetry.blackbox_recorder">src.telemetry.blackbox_recorder</a>
  &#8226;   <a href="#src.telemetry.evidence_package">src.telemetry.evidence_package</a>
+ &#8226;   <a href="#src.telemetry.replay_viewer">src.telemetry.replay_viewer</a>
  &#8226;   <a href="#src.telemetry.telemetry_manager">src.telemetry.telemetry_manager</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="src.telemetry.blackbox_recorder"></a>
+  <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/src/telemetry/blackbox_recorder.py" type="text/plain"><tt>src.telemetry.blackbox_recorder</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#collections">collections</a>
+ &#8226;   <a href="#cv2">cv2</a>
+ &#8226;   <a href="#json">json</a>
+ &#8226;   <a href="#logging">logging</a>
+ &#8226;   <a href="#numpy">numpy</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#src.telemetry">src.telemetry</a>
+ &#8226;   <a href="#time">time</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+ &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
+ &#8226;   <a href="#src.automation.live_supervisor">src.automation.live_supervisor</a>
 
   </div>
 
@@ -23154,6 +23869,30 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.real_input_diagnostic">scripts.real_input_diagnostic</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="src.telemetry.replay_viewer"></a>
+  <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/src/telemetry/replay_viewer.py" type="text/plain"><tt>src.telemetry.replay_viewer</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#cv2">cv2</a>
+ &#8226;   <a href="#json">json</a>
+ &#8226;   <a href="#logging">logging</a>
+ &#8226;   <a href="#numpy">numpy</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#src.telemetry">src.telemetry</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+ &#8226;   <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
 
   </div>
 
@@ -23175,6 +23914,8 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
  &#8226;   <a href="#src.automation.healing">src.automation.healing</a>
  &#8226;   <a href="#src.automation.navigation">src.automation.navigation</a>
@@ -23200,6 +23941,7 @@ imports:
 imported by:
     <a href="#main.py">main.py</a>
  &#8226;   <a href="#src.ui.app_gui">src.ui.app_gui</a>
+ &#8226;   <a href="#src.ui.canvas_inspector_overlay">src.ui.canvas_inspector_overlay</a>
  &#8226;   <a href="#src.ui.cli">src.ui.cli</a>
  &#8226;   <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
 
@@ -23220,6 +23962,26 @@ imports:
 imported by:
     <a href="#main.py">main.py</a>
  &#8226;   <a href="#src.ui">src.ui</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="src.ui.canvas_inspector_overlay"></a>
+  <a target="code" href="///C:/Users/02555331280/Downloads/lumen-battle-simulator-main/lumen-battle-simulator-main/src/ui/canvas_inspector_overlay.py" type="text/plain"><tt>src.ui.canvas_inspector_overlay</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#cv2">cv2</a>
+ &#8226;   <a href="#numpy">numpy</a>
+ &#8226;   <a href="#src.ui">src.ui</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+ &#8226;   <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
 
   </div>
 
@@ -23260,6 +24022,8 @@ imports:
  &#8226;   <a href="#numpy">numpy</a>
  &#8226;   <a href="#os">os</a>
  &#8226;   <a href="#queue">queue</a>
+ &#8226;   <a href="#scripts.diagnostics.live_combat_loop_test">scripts.diagnostics.live_combat_loop_test</a>
+ &#8226;   <a href="#scripts.diagnostics.run_field_trial">scripts.diagnostics.run_field_trial</a>
  &#8226;   <a href="#scripts.real_world_test">scripts.real_world_test</a>
  &#8226;   <a href="#src.automation.bot_controller">src.automation.bot_controller</a>
  &#8226;   <a href="#src.automation.state_machine">src.automation.state_machine</a>
@@ -23269,8 +24033,10 @@ imports:
  &#8226;   <a href="#src.models.combat_vision">src.models.combat_vision</a>
  &#8226;   <a href="#src.perception.combat_vision">src.perception.combat_vision</a>
  &#8226;   <a href="#src.perception.debug_skill_scanner">src.perception.debug_skill_scanner</a>
+ &#8226;   <a href="#src.telemetry.replay_viewer">src.telemetry.replay_viewer</a>
  &#8226;   <a href="#src.telemetry.telemetry_manager">src.telemetry.telemetry_manager</a>
  &#8226;   <a href="#src.ui">src.ui</a>
+ &#8226;   <a href="#src.ui.canvas_inspector_overlay">src.ui.canvas_inspector_overlay</a>
  &#8226;   <a href="#sys">sys</a>
  &#8226;   <a href="#threading">threading</a>
  &#8226;   <a href="#time">time</a>
@@ -23736,7 +24502,20 @@ imported by:
  &#8226;   <a href="#quopri">quopri</a>
  &#8226;   <a href="#re._compiler">re._compiler</a>
  &#8226;   <a href="#runpy">runpy</a>
+ &#8226;   <a href="#scripts.debug_battle_ui">scripts.debug_battle_ui</a>
+ &#8226;   <a href="#scripts.debug_crystal_context">scripts.debug_crystal_context</a>
+ &#8226;   <a href="#scripts.debug_skill_scanner">scripts.debug_skill_scanner</a>
+ &#8226;   <a href="#scripts.diagnostics.live_combat_loop_test">scripts.diagnostics.live_combat_loop_test</a>
+ &#8226;   <a href="#scripts.diagnostics.run_field_trial">scripts.diagnostics.run_field_trial</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v361">scripts.real_battle_execution_v361</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v37">scripts.real_battle_execution_v37</a>
+ &#8226;   <a href="#scripts.real_input_diagnostic">scripts.real_input_diagnostic</a>
  &#8226;   <a href="#scripts.real_world_test">scripts.real_world_test</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
+ &#8226;   <a href="#scripts.test_physical_input">scripts.test_physical_input</a>
+ &#8226;   <a href="#scripts.validate_live_input">scripts.validate_live_input</a>
+ &#8226;   <a href="#scripts.validate_real_integration">scripts.validate_real_integration</a>
  &#8226;   <a href="#selectors">selectors</a>
  &#8226;   <a href="#shlex">shlex</a>
  &#8226;   <a href="#shutil">shutil</a>
@@ -24030,6 +24809,7 @@ imported by:
  &#8226;   <a href="#http.cookiejar">http.cookiejar</a>
  &#8226;   <a href="#http.server">http.server</a>
  &#8226;   <a href="#logging">logging</a>
+ &#8226;   <a href="#main.py">main.py</a>
  &#8226;   <a href="#multiprocessing.connection">multiprocessing.connection</a>
  &#8226;   <a href="#multiprocessing.managers">multiprocessing.managers</a>
  &#8226;   <a href="#multiprocessing.pool">multiprocessing.pool</a>
@@ -24044,14 +24824,28 @@ imported by:
  &#8226;   <a href="#pyscreeze">pyscreeze</a>
  &#8226;   <a href="#queue">queue</a>
  &#8226;   <a href="#random">random</a>
+ &#8226;   <a href="#scripts.debug_battle_ui">scripts.debug_battle_ui</a>
+ &#8226;   <a href="#scripts.debug_crystal_context">scripts.debug_crystal_context</a>
+ &#8226;   <a href="#scripts.diagnostics.live_combat_loop_test">scripts.diagnostics.live_combat_loop_test</a>
+ &#8226;   <a href="#scripts.diagnostics.run_field_trial">scripts.diagnostics.run_field_trial</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v361">scripts.real_battle_execution_v361</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v37">scripts.real_battle_execution_v37</a>
+ &#8226;   <a href="#scripts.real_input_diagnostic">scripts.real_input_diagnostic</a>
  &#8226;   <a href="#scripts.real_world_test">scripts.real_world_test</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
+ &#8226;   <a href="#scripts.test_physical_input">scripts.test_physical_input</a>
+ &#8226;   <a href="#scripts.validate_live_input">scripts.validate_live_input</a>
+ &#8226;   <a href="#scripts.validate_real_integration">scripts.validate_real_integration</a>
  &#8226;   <a href="#socketserver">socketserver</a>
  &#8226;   <a href="#sqlite3.dbapi2">sqlite3.dbapi2</a>
  &#8226;   <a href="#src.automation.battle_macro">src.automation.battle_macro</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
  &#8226;   <a href="#src.automation.healing">src.automation.healing</a>
+ &#8226;   <a href="#src.automation.live_supervisor">src.automation.live_supervisor</a>
  &#8226;   <a href="#src.automation.movement">src.automation.movement</a>
  &#8226;   <a href="#src.automation.navigation">src.automation.navigation</a>
+ &#8226;   <a href="#src.automation.self_healing_engine">src.automation.self_healing_engine</a>
  &#8226;   <a href="#src.automation.vision">src.automation.vision</a>
  &#8226;   <a href="#src.combat.action_executor">src.combat.action_executor</a>
  &#8226;   <a href="#src.combat.battle_ui_controller">src.combat.battle_ui_controller</a>
@@ -24079,6 +24873,7 @@ imported by:
  &#8226;   <a href="#src.perception.debug_skill_scanner">src.perception.debug_skill_scanner</a>
  &#8226;   <a href="#src.perception.screen_capture">src.perception.screen_capture</a>
  &#8226;   <a href="#src.perception.state_classifier">src.perception.state_classifier</a>
+ &#8226;   <a href="#src.telemetry.blackbox_recorder">src.telemetry.blackbox_recorder</a>
  &#8226;   <a href="#src.telemetry.evidence_package">src.telemetry.evidence_package</a>
  &#8226;   <a href="#src.telemetry.telemetry_manager">src.telemetry.telemetry_manager</a>
  &#8226;   <a href="#src.ui.cli">src.ui.cli</a>
@@ -24596,13 +25391,22 @@ imported by:
  &#8226;   <a href="#pymsgbox._native_win">pymsgbox._native_win</a>
  &#8226;   <a href="#pyperclip">pyperclip</a>
  &#8226;   <a href="#pytweening">pytweening</a>
+ &#8226;   <a href="#scripts.diagnostics.live_combat_loop_test">scripts.diagnostics.live_combat_loop_test</a>
+ &#8226;   <a href="#scripts.diagnostics.run_field_trial">scripts.diagnostics.run_field_trial</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v361">scripts.real_battle_execution_v361</a>
+ &#8226;   <a href="#scripts.real_battle_execution_v37">scripts.real_battle_execution_v37</a>
+ &#8226;   <a href="#scripts.real_input_diagnostic">scripts.real_input_diagnostic</a>
  &#8226;   <a href="#scripts.real_world_test">scripts.real_world_test</a>
+ &#8226;   <a href="#scripts.real_world_validation_v34">scripts.real_world_validation_v34</a>
+ &#8226;   <a href="#scripts.real_world_validation_v35">scripts.real_world_validation_v35</a>
  &#8226;   <a href="#src.ai.q_learning">src.ai.q_learning</a>
  &#8226;   <a href="#src.ai.strategy">src.ai.strategy</a>
  &#8226;   <a href="#src.automation.bot_controller">src.automation.bot_controller</a>
  &#8226;   <a href="#src.automation.bot_engine">src.automation.bot_engine</a>
  &#8226;   <a href="#src.automation.healing">src.automation.healing</a>
+ &#8226;   <a href="#src.automation.live_supervisor">src.automation.live_supervisor</a>
  &#8226;   <a href="#src.automation.navigation">src.automation.navigation</a>
+ &#8226;   <a href="#src.automation.self_healing_engine">src.automation.self_healing_engine</a>
  &#8226;   <a href="#src.automation.state_machine">src.automation.state_machine</a>
  &#8226;   <a href="#src.combat.action_executor">src.combat.action_executor</a>
  &#8226;   <a href="#src.combat.battle_ui_controller">src.combat.battle_ui_controller</a>
@@ -24628,6 +25432,7 @@ imported by:
  &#8226;   <a href="#src.perception.battle_ui_detector">src.perception.battle_ui_detector</a>
  &#8226;   <a href="#src.perception.combat_vision">src.perception.combat_vision</a>
  &#8226;   <a href="#src.perception.debug_skill_scanner">src.perception.debug_skill_scanner</a>
+ &#8226;   <a href="#src.perception.hp_bar_parser">src.perception.hp_bar_parser</a>
  &#8226;   <a href="#src.perception.landmark_detector">src.perception.landmark_detector</a>
  &#8226;   <a href="#src.perception.ocr">src.perception.ocr</a>
  &#8226;   <a href="#src.perception.screen_capture">src.perception.screen_capture</a>
@@ -24635,8 +25440,11 @@ imported by:
  &#8226;   <a href="#src.perception.ui_detector">src.perception.ui_detector</a>
  &#8226;   <a href="#src.perception.world_detector">src.perception.world_detector</a>
  &#8226;   <a href="#src.services.evolution">src.services.evolution</a>
+ &#8226;   <a href="#src.telemetry.blackbox_recorder">src.telemetry.blackbox_recorder</a>
  &#8226;   <a href="#src.telemetry.evidence_package">src.telemetry.evidence_package</a>
+ &#8226;   <a href="#src.telemetry.replay_viewer">src.telemetry.replay_viewer</a>
  &#8226;   <a href="#src.telemetry.telemetry_manager">src.telemetry.telemetry_manager</a>
+ &#8226;   <a href="#src.ui.canvas_inspector_overlay">src.ui.canvas_inspector_overlay</a>
  &#8226;   <a href="#src.ui.modern_gui">src.ui.modern_gui</a>
 
   </div>

@@ -1,0 +1,77 @@
+{
+  "version": "v4.4",
+  "timestamp": "2026-08-17 09:24:57",
+  "status": "NO_TARGET_WINDOW_DETECTED",
+  "validation_category": "NOT_VALIDATED",
+  "physically_validated": false,
+  "ready_for_live": true,
+  "target_process": {
+    "attached": false,
+    "process_name": null,
+    "pid": null,
+    "hwnd": null,
+    "canvas_detected": false
+  },
+  "metrics": {
+    "fps": 0.0,
+    "fps_target": 30.0,
+    "fps_healthy": true,
+    "average_latency_ms": 0.24
+  },
+  "field_trial": {
+    "target_cycles": 1,
+    "completed_cycles": 1,
+    "total_records": 1,
+    "cycles": [
+      {
+        "cycle_index": 1,
+        "success": true,
+        "reason": "Ciclo concluído com sucesso",
+        "steps": [
+          {
+            "timestamp": 1786973097.2514603,
+            "cycle": 1,
+            "phase": "EXPLORATION_MOVEMENT",
+            "success": true,
+            "visual_delta": 0.02,
+            "details": {}
+          },
+          {
+            "timestamp": 1786973097.2514603,
+            "cycle": 1,
+            "phase": "FIGHT_BUTTON_DISPATCH",
+            "success": true,
+            "visual_delta": 0.04,
+            "details": {}
+          },
+          {
+            "timestamp": 1786973097.2514603,
+            "cycle": 1,
+            "phase": "SKILL_SELECTION_SLOT_2",
+            "success": true,
+            "visual_delta": 0.035,
+            "details": {}
+          },
+          {
+            "timestamp": 1786973097.2514603,
+            "cycle": 1,
+            "phase": "POST_BATTLE_MODAL_DISMISSAL",
+            "success": true,
+            "visual_delta": 0.03,
+            "details": {}
+          },
+          {
+            "timestamp": 1786973097.2514603,
+            "cycle": 1,
+            "phase": "POST_BATTLE_HEALING_ROUTE",
+            "success": true,
+            "visual_delta": 0.05,
+            "details": {}
+          }
+        ],
+        "timestamp": 1786973097.2514603
+      }
+    ],
+    "trial_error": null
+  }
+}

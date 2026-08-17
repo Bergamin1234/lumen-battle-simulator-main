@@ -25,12 +25,77 @@ class ScreenCapture:
         self._previous_frame: Optional[np.ndarray] = None
         self._current_timestamp: float = 0.0
         self._motion_energy: float = 0.0
+        self.current_canvas_bounds: Tuple[int, int, int, int] = (0, 0, 1920, 1080)
+        self.zoom_factor: float = 1.0
+        self.is_letterboxed: bool = False
 
     @property
     def sct(self) -> mss.mss:
         if self._sct is None:
             self._sct = mss.mss()
         return self._sct
+
+    def detect_webgl_canvas_bounds(self, raw_frame: Optional[np.ndarray] = None) -> Tuple[int, int, int, int]:
+        """
+        Escaneia o frame da janela descartando barras pretas puras (Letterboxing/Pillarboxing)
+        e bordas de interface de navegador para isolar o retângulo ativo do Canvas WebGL.
+        Retorna (canvas_x, canvas_y, canvas_w, canvas_h).
+        """
+        frame = raw_frame if raw_frame is not None else self._current_frame
+        if frame is None or frame.size == 0:
+            return self.current_canvas_bounds
+
+        h, w = frame.shape[:2]
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if len(frame.shape) == 3 else frame
+
+        # Identifica linhas e colunas não-pretas (threshold > 15 para tolerar leve ruído)
+        row_mask = np.max(gray, axis=1) > 15
+        col_mask = np.max(gray, axis=0) > 15
+
+        row_indices = np.where(row_mask)[0]
+        col_indices = np.where(col_mask)[0]
+
+        if len(row_indices) == 0 or len(col_indices) == 0:
+            # Tela preta completa ou inválida
+            return 0, 0, w, h
+
+        top = int(row_indices[0])
+        bottom = int(row_indices[-1])
+        left = int(col_indices[0])
+        right = int(col_indices[-1])
+
+        canvas_w = max(1, right - left + 1)
+        canvas_h = max(1, bottom - top + 1)
+
+        # Se cobrir > 98% da tela, considera tela cheia sem letterbox
+        is_letterboxed = (canvas_w < w * 0.98) or (canvas_h < h * 0.98)
+        self.is_letterboxed = is_letterboxed
+        self.current_canvas_bounds = (left, top, canvas_w, canvas_h)
+
+        # Estima fator de escala relativo a 1080p
+        self.zoom_factor = round(canvas_w / 1920.0, 3) if canvas_w > 0 else 1.0
+        return self.current_canvas_bounds
+
+    def map_normalized_roi_to_canvas(
+        self,
+        roi_norm: Tuple[float, float, float, float],
+        frame_shape: Optional[Tuple[int, int]] = None,
+    ) -> Tuple[int, int, int, int]:
+        """
+        Mapeia uma ROI normalizada (nx, ny, nw, nh entre 0.0 e 1.0) estritamente
+        para as coordenadas absolutas dentro do Canvas WebGL detectado.
+        """
+        cx, cy, cw, ch = self.current_canvas_bounds
+        if frame_shape and (cw == 0 or ch == 0):
+            h, w = frame_shape
+            cx, cy, cw, ch = 0, 0, w, h
+
+        nx, ny, nw, nh = roi_norm
+        rx = int(cx + nx * cw)
+        ry = int(cy + ny * ch)
+        rw = int(nw * cw)
+        rh = int(nh * ch)
+        return rx, ry, rw, rh
 
     def set_capture_region(self, region: Optional[Dict[str, int]]) -> None:
         with self._lock:
@@ -65,6 +130,8 @@ class ScreenCapture:
                 sct_img = self.sct.grab(box)
                 frame_bgra = np.array(sct_img, dtype=np.uint8)
                 frame_bgr = cv2.cvtColor(frame_bgra, cv2.COLOR_BGRA2BGR)
+                del sct_img
+                del frame_bgra
 
                 self._previous_frame = self._current_frame
                 self._current_frame = frame_bgr
