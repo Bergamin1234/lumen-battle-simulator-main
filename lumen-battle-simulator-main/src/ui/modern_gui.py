@@ -23,6 +23,7 @@ from src.perception.combat_vision import CombatVisionAnalyzer
 from src.models.combat_vision import CombatSnapshot, SkillSlot, EnemyTarget
 from src.ui.canvas_inspector_overlay import CanvasInspectorOverlay
 from src.telemetry.replay_viewer import BlackboxReplayEngine
+from src.ui.setup_tutorial_wizard import SetupTutorialWizard
 
 logger = logging.getLogger("LumenaGUI")
 
@@ -92,6 +93,10 @@ class ModernLumenaGUI:
         # Inicia loop de telemetria e consumo de eventos na UI thread
         self.root.after(50, self._ui_telemetry_tick)
 
+        # Se for primeira execução ou não configurado, abre o assistente tutorial automaticamente
+        if not getattr(self.config, "tutorial_completed", False):
+            self.root.after(400, self._on_open_tutorial_wizard)
+
     def _setup_styles(self) -> None:
         style = ttk.Style()
         style.theme_use("clam")
@@ -101,6 +106,7 @@ class ModernLumenaGUI:
         style.configure("TProgressbar", thickness=8, troughcolor=THEME["bg_card_alt"], background=THEME["accent_blue"])
 
     def _setup_keybindings(self) -> None:
+        self.root.bind("<F1>", lambda e: self._on_open_tutorial_wizard())
         self.root.bind("<Escape>", lambda e: self._on_emergency_stop())
         self.root.bind("<F5>", lambda e: self._on_start_bot())
         self.root.bind("<F6>", lambda e: self._on_pause_bot())
@@ -131,6 +137,19 @@ class ModernLumenaGUI:
         btn_box = tk.Frame(self.header_frame, bg=THEME["bg_sidebar"])
         btn_box.pack(side="left", padx=12)
 
+        tk.Button(
+            btn_box,
+            text="🧙 TUTORIAL 100% (F1)",
+            bg=THEME["accent_purple"],
+            fg="white",
+            font=(THEME["font_family"], 9, "bold"),
+            bd=0,
+            padx=12,
+            pady=5,
+            cursor="hand2",
+            command=self._on_open_tutorial_wizard,
+        ).pack(side="left", padx=3)
+
         self.btn_top_start = tk.Button(btn_box, text="▶ START (F5)", bg=THEME["accent_primary"], fg="white", font=(THEME["font_family"], 9, "bold"), bd=0, padx=14, pady=5, cursor="hand2", command=self._on_start_bot)
         self.btn_top_start.pack(side="left", padx=3)
 
@@ -140,7 +159,7 @@ class ModernLumenaGUI:
         self.btn_top_stop = tk.Button(btn_box, text="■ STOP (F7)", bg=THEME["bg_card_alt"], fg=THEME["text_primary"], font=(THEME["font_family"], 9), bd=0, padx=10, pady=5, cursor="hand2", command=self._on_stop_bot)
         self.btn_top_stop.pack(side="left", padx=3)
 
-        tk.Button(btn_box, text="🧙 TARGET WIZARD", bg=THEME["accent_blue"], fg="white", font=(THEME["font_family"], 9, "bold"), bd=0, padx=10, pady=5, cursor="hand2", command=self._on_open_target_wizard).pack(side="left", padx=4)
+        tk.Button(btn_box, text="🎯 TARGET WIZARD", bg=THEME["accent_blue"], fg="white", font=(THEME["font_family"], 9, "bold"), bd=0, padx=10, pady=5, cursor="hand2", command=self._on_open_target_wizard).pack(side="left", padx=4)
 
         # Status Global Badge
         self.status_badge = tk.Label(
@@ -281,6 +300,39 @@ class ModernLumenaGUI:
     # -------------------------------------------------------------
     def _create_dashboard_page(self) -> tk.Frame:
         page = tk.Frame(self.content_container, bg=THEME["bg_dark"])
+
+        # Banner de Tutorial & Calibração Rápida (100% Automatizado)
+        tutorial_banner = tk.Frame(page, bg=THEME["bg_card"], padx=14, pady=8, highlightthickness=1, highlightbackground=THEME["border"])
+        tutorial_banner.pack(fill="x", pady=(0, 8))
+
+        tk.Label(
+            tutorial_banner,
+            text="🚀 TUTORIAL PASSO A PASSO:",
+            bg=THEME["bg_card"],
+            fg=THEME["accent_primary"],
+            font=(THEME["font_family"], 9, "bold"),
+        ).pack(side="left")
+
+        tk.Label(
+            tutorial_banner,
+            text="Calibre o Chrome, o Mato de Farm e a Rota de Cura para operação 100% autônoma.",
+            bg=THEME["bg_card"],
+            fg=THEME["text_secondary"],
+            font=(THEME["font_family"], 9),
+        ).pack(side="left", padx=8)
+
+        tk.Button(
+            tutorial_banner,
+            text="🧙 ABRIR ASSISTENTE PASSO A PASSO (F1)",
+            bg=THEME["accent_purple"],
+            fg="white",
+            font=(THEME["font_family"], 8, "bold"),
+            bd=0,
+            padx=12,
+            pady=4,
+            cursor="hand2",
+            command=self._on_open_tutorial_wizard,
+        ).pack(side="right")
 
         cards_row = tk.Frame(page, bg=THEME["bg_dark"])
         cards_row.pack(fill="x", pady=(0, 10))
@@ -951,6 +1003,17 @@ class ModernLumenaGUI:
         tk.Label(card, text=info_text, bg=THEME["bg_dark"], fg="#93C5FD", font=("Consolas", 10), justify="left", padx=14, pady=12).pack(fill="both", expand=True)
 
         return page
+
+    # -------------------------------------------------------------
+    # WIZARD: TUTORIAL PASSO A PASSO (100% AUTOMATIZADO)
+    # -------------------------------------------------------------
+    def _on_open_tutorial_wizard(self) -> None:
+        """Abre o assistente tutorial interativo passo a passo para automação 100%."""
+        SetupTutorialWizard(
+            parent=self.root,
+            bot_controller=self.bot_controller,
+            on_finish_callback=lambda: self.show_page("dashboard"),
+        )
 
     # -------------------------------------------------------------
     # WIZARD: TARGET WINDOW CONFIGURATION WIZARD (INTERACTIVE CANDIDATE SELECTION)

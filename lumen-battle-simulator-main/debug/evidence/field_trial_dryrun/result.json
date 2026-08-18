@@ -1,6 +1,6 @@
 {
   "version": "v4.4",
-  "timestamp": "2026-08-17 13:17:32",
+  "timestamp": "2026-08-18 09:49:25",
   "status": "NO_TARGET_WINDOW_DETECTED",
   "validation_category": "NOT_VALIDATED",
   "physically_validated": false,
@@ -16,7 +16,7 @@
     "fps": 0.0,
     "fps_target": 30.0,
     "fps_healthy": true,
-    "average_latency_ms": 0.35
+    "average_latency_ms": 0.33
   },
   "field_trial": {
     "target_cycles": 1,
@@ -29,7 +29,7 @@
         "reason": "Ciclo concluído com sucesso",
         "steps": [
           {
-            "timestamp": 1786987052.5024972,
+            "timestamp": 1787060965.328363,
             "cycle": 1,
             "phase": "EXPLORATION_MOVEMENT",
             "success": true,
@@ -37,7 +37,7 @@
             "details": {}
           },
           {
-            "timestamp": 1786987052.5024972,
+            "timestamp": 1787060965.3288825,
             "cycle": 1,
             "phase": "FIGHT_BUTTON_DISPATCH",
             "success": true,
@@ -45,7 +45,7 @@
             "details": {}
           },
           {
-            "timestamp": 1786987052.5024972,
+            "timestamp": 1787060965.3288825,
             "cycle": 1,
             "phase": "SKILL_SELECTION_SLOT_2",
             "success": true,
@@ -53,7 +53,7 @@
             "details": {}
           },
           {
-            "timestamp": 1786987052.5030172,
+            "timestamp": 1787060965.3288825,
             "cycle": 1,
             "phase": "POST_BATTLE_MODAL_DISMISSAL",
             "success": true,
@@ -61,7 +61,7 @@
             "details": {}
           },
           {
-            "timestamp": 1786987052.5030172,
+            "timestamp": 1787060965.3288825,
             "cycle": 1,
             "phase": "POST_BATTLE_HEALING_ROUTE",
             "success": true,
@@ -69,7 +69,7 @@
             "details": {}
           }
         ],
-        "timestamp": 1786987052.5030172
+        "timestamp": 1787060965.3288825
       }
     ],
     "trial_error": null

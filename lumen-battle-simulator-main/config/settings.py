@@ -61,6 +61,7 @@ class BotConfig:
     critical_hp_ratio: float = 0.20
     healing_hp_ratio: float = 0.40
     combat_action_timeout: float = 5.0
+    tutorial_completed: bool = False
     keys: KeyBindings = field(default_factory=KeyBindings)
     monitor_cfg: MonitorConfig = field(default_factory=MonitorConfig)
     battle_cfg: BattleConfig = field(default_factory=BattleConfig)
@@ -113,6 +114,7 @@ class BotConfig:
             "attack_delay": self.attack_delay,
             "monitor": self.monitor,
             "battles_before_heal_check": self.battles_before_heal_check,
+            "tutorial_completed": self.tutorial_completed,
             "keys": {
                 "up": self.keys.up,
                 "down": self.keys.down,
